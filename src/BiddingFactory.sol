@@ -17,6 +17,7 @@ contract BiddingFactory {
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant INITIAL_BID_AMOUNT = 1e18;
 
+    address[] private auctionList;
     USDTest private immutable i_usdt;
 
     event HundredDollarAuctionCreated(address indexed Auction);
@@ -31,6 +32,7 @@ contract BiddingFactory {
      */
     function startBid() public {
         HundredDollarAuction auction = new HundredDollarAuction(i_usdt, msg.sender);
+        auctionList.push(address(auction));
 
         bool success = i_usdt.transferFrom(msg.sender, address(auction), INITIAL_BID_AMOUNT);
         if (!success) {
@@ -44,5 +46,7 @@ contract BiddingFactory {
         if (!minted) {
             revert BiddingFactory__MintFailed();
         }
+
+        emit HundredDollarAuctionCreated(address(auction));
     }
 }
