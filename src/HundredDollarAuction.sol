@@ -14,9 +14,9 @@ import {USDTest} from "./USDTest.sol";
  * Winning Bid - the highest standing bid amount when the auction ends
  * Losing Bid - the lowest standing bid amount when the auction ends
  * 
- * @notice BUY MY $100 FOR ONLY $1.
+ * BUY MY $100 FOR ONLY $1.
  * 
- * This contract holds 100 USDTest which can be bought for at least 1 USDTest.
+ * @notice This contract holds 100 USDTest which can be bought for at least 1 USDTest.
  * 
  * But here's the catch:
  * 
@@ -29,18 +29,28 @@ import {USDTest} from "./USDTest.sol";
  *    auction anytime.
  */
 contract HundredDollarAuction is Ownable {
+    error HundredDollarAuction__TransferFailed();
+    error HundredDollarAuction__BidCollectionFailed();
     error HundredDollarAuction__AuctionOccupied();
     error HundredDollarAuction__AmountDidNotOutbid();
     error HundredDollarAuction__NotABidder();
     error HundredDollarAuction__LessThanTwoBidders();
 
+    enum Status { WAITING, ACTIVE, CAN_COLLECT, ENDED }
+
+    uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant INITIAL_BID_AMOUNT = 1e18;
 
     mapping(address bidder => uint256 bidAmount) private s_bidAmounts;
+    // This mapping makes toggling between bidders easier and more gas efficient
+    // instead of finding bidder and opponent bidder everytime.
     mapping(address bidder => address opponentBidder) private s_opponentBidder;
+
     address private s_firstBidder;
     address private s_secondBidder;
+    address private s_winningBidder;
     USDTest private immutable i_usdt;
+    Status private status = Status.WAITING;
 
     constructor(USDTest usdt, address firstBidder) {
         i_usdt = usdt;
@@ -56,13 +66,13 @@ contract HundredDollarAuction is Ownable {
     }
 
     modifier onlyWithTwoBidders {
-        if (s_opponentBidder[msg.sender] == address(0)) {
+        if (s_secondBidder == address(0)) {
             revert HundredDollarAuction__LessThanTwoBidders();
         }
         _;
     }
 
-    function joinBid(uint256 bidAmount) public {
+    function joinAuction(uint256 bidAmount) public {
         if (s_secondBidder != address(0)) {
             revert HundredDollarAuction__AuctionOccupied();
         }
@@ -72,8 +82,11 @@ contract HundredDollarAuction is Ownable {
 
         s_secondBidder = msg.sender;
         s_bidAmounts[s_secondBidder] = INITIAL_BID_AMOUNT;
+        status = Status.ACTIVE;
+
         s_opponentBidder[s_firstBidder] = s_secondBidder;
         s_opponentBidder[s_secondBidder] = s_firstBidder;
+        _updateWinningBidder();
     }
 
     function outBid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders {
@@ -83,9 +96,42 @@ contract HundredDollarAuction is Ownable {
         }
 
         s_bidAmounts[msg.sender] = currentBid;
+        _updateWinningBidder();
     }
 
-    function forfeit() public onlyBidder onlyWithTwoBidders {}
+    function forfeit() public onlyBidder onlyWithTwoBidders {
+        bool transferedToWinner = i_usdt.transfer(s_opponentBidder[msg.sender], AUCTION_PRICE);
+        if (!transferedToWinner) {
+            revert HundredDollarAuction__TransferFailed();
+        }
 
-    function collect() public onlyOwner {}
+        bool collectedBids = i_usdt.transfer(owner(), i_usdt.balanceOf(address(this)));
+        if (!collectedBids) {
+            revert HundredDollarAuction__BidCollectionFailed();
+        }
+    }
+
+    function endAuction() public onlyOwner {}
+
+    function _endAuction(address winner) private {
+        bool transferedToWinner = i_usdt.transfer(winner, AUCTION_PRICE);
+        if (!transferedToWinner) {
+            revert HundredDollarAuction__TransferFailed();
+        }
+
+        bool collectedBids = i_usdt.transfer(owner(), i_usdt.balanceOf(address(this)));
+        if (!collectedBids) {
+            revert HundredDollarAuction__BidCollectionFailed();
+        }
+
+        status = Status.ENDED;
+    }
+
+    function _updateWinningBidder() private {
+        s_winningBidder = msg.sender;
+
+        if (s_bidAmounts[s_winningBidder] >= AUCTION_PRICE) {
+            status = Status.CAN_COLLECT;
+        }
+    }
 }
