@@ -35,6 +35,7 @@ contract HundredDollarAuction is Ownable {
     error HundredDollarAuction__AuctioneerOccupied();
     error HundredDollarAuction__AmountDidNotOutbid();
     error HundredDollarAuction__NotABidder();
+    error HundredDollarAuction__NotAnAuctioneer();
     error HundredDollarAuction__LessThanTwoBidders();
     error HundredDollarAuction__TheSameBidderNotAllowed();
     error HundredDollarAuction__BidderCantOverseeAuction();
@@ -72,6 +73,13 @@ contract HundredDollarAuction is Ownable {
     modifier onlyWithTwoBidders {
         if (s_secondBidder == address(0)) {
             revert HundredDollarAuction__LessThanTwoBidders();
+        }
+        _;
+    }
+
+    modifier onlyAuctioneer {
+        if (msg.sender != s_auctioneer) {
+            revert HundredDollarAuction__NotAnAuctioneer();
         }
         _;
     }
@@ -146,7 +154,9 @@ contract HundredDollarAuction is Ownable {
         s_auctioneer = msg.sender;
     }
 
-    function endAuction() public onlyOwner {}
+    function endAuction() public onlyAuctioneer {
+        _endAuction(s_winningBidder);
+    }
 
     function _endAuction(address winner) private {
         bool transferedToWinner = i_usdt.transfer(winner, AUCTION_PRICE);
