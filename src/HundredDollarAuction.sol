@@ -33,14 +33,16 @@ contract HundredDollarAuction {
     error HundredDollarAuction__BidCollectionFailed();
     error HundredDollarAuction__BiddersOccupied();
     error HundredDollarAuction__AuctioneerOccupied();
-    error HundredDollarAuction__AmountDidNotOutbid();
+    error HundredDollarAuction__AmountDidNotOutbid(uint256 currentBid, uint256 amountToBid);
+    error HundredDollarAuction__AmountIsLessThanInitialBidOfOneUSDT(uint256 amountToBid);
     error HundredDollarAuction__NotABidder();
     error HundredDollarAuction__NotAnAuctioneer();
     error HundredDollarAuction__LessThanTwoBidders();
     error HundredDollarAuction__TheSameBidderNotAllowed();
     error HundredDollarAuction__BidderCantOverseeAuction();
 
-    enum Status { WAITING, ACTIVE, CAN_COLLECT, ENDED, CANCELLED }
+    enum Status { OPEN, WAITING, ACTIVE, CAN_COLLECT, ENDED, CANCELLED }
+    enum NumberOfBidders { ZERO, ONE, TWO }
 
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant INITIAL_BID_AMOUNT = 1e18;
@@ -55,7 +57,9 @@ contract HundredDollarAuction {
     address private s_firstBidder;
     address private s_secondBidder;
     address private s_winningBidder;
-    Status private s_status = Status.WAITING;
+    uint256 private s_currentBid;
+    NumberOfBidders private s_numberOfBidders = NumberOfBidders.ZERO;
+    Status private s_status = Status.OPEN;
     USDTest private immutable i_usdt;
 
     /**
@@ -85,7 +89,6 @@ contract HundredDollarAuction {
         s_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
-        // s_bidAmounts[s_firstBidder] = INITIAL_BID_AMOUNT;
     }
 
     modifier onlyBidder {
@@ -96,7 +99,7 @@ contract HundredDollarAuction {
     }
 
     modifier onlyWithTwoBidders {
-        if (s_secondBidder == address(0)) {
+        if (s_numberOfBidders != NumberOfBidders.TWO) {
             revert HundredDollarAuction__LessThanTwoBidders();
         }
         _;
@@ -109,12 +112,32 @@ contract HundredDollarAuction {
         _;
     }
 
-    function joinAuction(uint256 bidAmount) public {
+    function joinAuction(uint256 amountToBid) public {
+        if (s_firstBidder == address(0)) {
+            _joinAuctionFirstBidder(amountToBid);
+        }
+        else {
+            _joinAuctionSecondBidder(amountToBid);
+        }
+    }
+
+    function _joinAuctionFirstBidder(uint256 amountToBid) private {
+        if (amountToBid <= INITIAL_BID_AMOUNT) {
+            revert HundredDollarAuction__AmountIsLessThanInitialBidOfOneUSDT(amountToBid);
+        }
+
+        s_firstBidder = msg.sender;
+        s_bidAmounts[s_firstBidder] = amountToBid;
+        _updateCurrentBid(amountToBid);
+        s_numberOfBidders = NumberOfBidders.ONE;
+    }
+
+    function _joinAuctionSecondBidder(uint256 amountToBid) private {
         if (s_secondBidder != address(0)) {
             revert HundredDollarAuction__BiddersOccupied();
         }
-        if (bidAmount <= INITIAL_BID_AMOUNT) {
-            revert HundredDollarAuction__AmountDidNotOutbid();
+        if (amountToBid <= s_bidAmounts[s_firstBidder]) {
+            revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
         }
         if (s_firstBidder == msg.sender) {
             revert HundredDollarAuction__TheSameBidderNotAllowed();
@@ -123,20 +146,21 @@ contract HundredDollarAuction {
         s_secondBidder = msg.sender;
         s_bidAmounts[s_secondBidder] = INITIAL_BID_AMOUNT;
         s_status = Status.ACTIVE;
+        s_numberOfBidders = NumberOfBidders.TWO;
 
         s_opponentBidder[s_firstBidder] = s_secondBidder;
         s_opponentBidder[s_secondBidder] = s_firstBidder;
-        _updateWinningBidder();
+        _updateCurrentBidAndWinningBidder(amountToBid);
     }
 
     function outBid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders {
-        uint256 currentBid = s_bidAmounts[msg.sender] + bidIncrement;
-        if (currentBid <= s_bidAmounts[s_opponentBidder[msg.sender]]) {
-            revert HundredDollarAuction__AmountDidNotOutbid();
+        uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
+        if (amountToBid <= s_bidAmounts[s_opponentBidder[msg.sender]]) {
+            revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
         }
 
-        s_bidAmounts[msg.sender] = currentBid;
-        _updateWinningBidder();
+        s_bidAmounts[msg.sender] = amountToBid;
+        _updateCurrentBidAndWinningBidder(amountToBid);
     }
 
     function forfeit() public onlyBidder onlyWithTwoBidders {
@@ -175,15 +199,28 @@ contract HundredDollarAuction {
         s_status = Status.ENDED;
     }
 
+    function _updateCurrentBid(uint256 amountToBid) private {
+        s_currentBid = amountToBid;
+    }
+
     function _updateWinningBidder() private {
         s_winningBidder = msg.sender;
 
-        if (s_bidAmounts[s_winningBidder] >= AUCTION_PRICE) {
+        if (s_currentBid >= AUCTION_PRICE) {
             s_status = Status.CAN_COLLECT;
         }
     }
 
-    function _getStatus() private view returns (Status) {
+    function _updateCurrentBidAndWinningBidder(uint256 amountToBid) private {
+        _updateCurrentBid(amountToBid);
+        _updateWinningBidder();
+    }
+
+    function getStatus() public view returns (Status) {
         return s_status;
+    }
+
+    function getNumberOfBidders() public view returns (NumberOfBidders) {
+        return s_numberOfBidders;
     }
 }
