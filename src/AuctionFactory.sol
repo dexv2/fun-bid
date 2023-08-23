@@ -5,17 +5,17 @@ import {USDTest} from "./USDTest.sol";
 import {HundredDollarAuction} from "./HundredDollarAuction.sol";
 
 /**
- * @title BiddingFactory
+ * @title AuctionFactory
  * @author Vermont Phil Paguiligan
  * @notice This contract creates an Auction contract which is initiated by a user who wants to enter the auction.
  * This also funds the Auction contract by 100 USDTest upon creation which should be the price of the user who wins the bid.
  */
-contract BiddingFactory {
-    error BiddingFactory__TransferFailed();
-    error BiddingFactory__MintFailed();
+contract AuctionFactory {
+    error AuctionFactory__TransferFailed();
+    error AuctionFactory__MintFailed();
 
     uint256 private constant AUCTION_PRICE = 100e18;
-    uint256 private constant INITIAL_BID_AMOUNT = 1e18;
+    uint256 private constant AUCTIONEERDEPOSIT = 10e18;
 
     address[] private auctionList;
     USDTest private immutable i_usdt;
@@ -27,24 +27,24 @@ contract BiddingFactory {
     }
 
     /**
-     * This is the main function of the Bidding factory which creates the Auction contract.
-     * Upon starting the bid, the user pays 1 USDTest as an initial bid amount.
+     * The user who calls this function will become an auctioneer who will oversee the auction.
+     * Upon starting the auction, the user deposits 10 USDTest which will be returned after the auction has ended.
      */
-    function startBid() public {
+    function openAuction() public {
         HundredDollarAuction auction = new HundredDollarAuction(i_usdt, msg.sender);
         auctionList.push(address(auction));
 
-        bool success = i_usdt.transferFrom(msg.sender, address(auction), INITIAL_BID_AMOUNT);
+        bool success = i_usdt.transferFrom(msg.sender, address(auction), AUCTIONEERDEPOSIT);
         if (!success) {
-            revert BiddingFactory__TransferFailed();
+            revert AuctionFactory__TransferFailed();
         }
 
         /**
-         * The Auction contract gets a fund for the winning bid.
+         * The Auction contract gets a fund for the winning bidder.
          */
         bool minted = i_usdt.mint(address(auction), AUCTION_PRICE);
         if (!minted) {
-            revert BiddingFactory__MintFailed();
+            revert AuctionFactory__MintFailed();
         }
 
         emit HundredDollarAuctionCreated(address(auction));

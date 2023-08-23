@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.18;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
 import {USDTest} from "./USDTest.sol";
 
 /**
@@ -9,8 +8,8 @@ import {USDTest} from "./USDTest.sol";
  * @author Vermont Phil Paguiligan
  *
  * Terms:
- * Auctioneer - entity that has the authority to end the auction
- * Bidder - the address of the user who joins the bid
+ * Auctioneer - entity who opens and has the authority to end and cancel the auction
+ * Bidder - the user who joins the auction
  * Winning Bid - the highest standing bid amount when the auction ends
  * Losing Bid - the lowest standing bid amount when the auction ends
  * 
@@ -28,7 +27,7 @@ import {USDTest} from "./USDTest.sol";
  * 4. When either of the bid reaches $100, the auctioneer can end the
  *    auction anytime.
  */
-contract HundredDollarAuction is Ownable {
+contract HundredDollarAuction {
     error HundredDollarAuction__TransferFailed();
     error HundredDollarAuction__BidCollectionFailed();
     error HundredDollarAuction__BiddersOccupied();
@@ -40,7 +39,7 @@ contract HundredDollarAuction is Ownable {
     error HundredDollarAuction__TheSameBidderNotAllowed();
     error HundredDollarAuction__BidderCantOverseeAuction();
 
-    enum Status { WAITING, ACTIVE, CAN_COLLECT, ENDED }
+    enum Status { WAITING, ACTIVE, CAN_COLLECT, ENDED, CANCELLED }
 
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant INITIAL_BID_AMOUNT = 1e18;
@@ -50,17 +49,42 @@ contract HundredDollarAuction is Ownable {
     // instead of finding bidder and opponent bidder everytime.
     mapping(address bidder => address opponentBidder) private s_opponentBidder;
 
+    address private s_factory;
     address private s_auctioneer;
     address private s_firstBidder;
     address private s_secondBidder;
     address private s_winningBidder;
-    USDTest private immutable i_usdt;
     Status private s_status = Status.WAITING;
+    USDTest private immutable i_usdt;
 
-    constructor(USDTest usdt, address firstBidder) {
+    /**
+     * @param usdt the token to bid and to be given as a reward
+     * @param auctioneer the entity who oversees the auction
+     * 
+     * Role of the auctioneer:
+     * 1. End the auction when either of the bid gets $100 of more.
+     * 2. Cancel the auction if it is idle for a given time.
+     * 
+     * Auctioneer will get a 10% commission based on the auction profit.
+     * We will need a deposit of $10 from auctioneer. It will be returned
+     * after the auction has ended or cancelled
+     * 
+     * Example:
+     * auctionPrice = $100
+     * winningBid = $110
+     * losingBid = $90
+     * 
+     * collectedBids = winningBid + losingBid // $110 + $90 = $200
+     * 
+     * profit = collectedBids - auctionPrice // $200 - $100 = $100
+     * 
+     * commission = profit * 10% // $100 * 10% = $10
+     */
+    constructor(USDTest usdt, address auctioneer) {
+        s_factory = msg.sender;
         i_usdt = usdt;
-        s_firstBidder = firstBidder;
-        s_bidAmounts[s_firstBidder] = INITIAL_BID_AMOUNT;
+        s_auctioneer = auctioneer;
+        // s_bidAmounts[s_firstBidder] = INITIAL_BID_AMOUNT;
     }
 
     modifier onlyBidder {
@@ -91,7 +115,7 @@ contract HundredDollarAuction is Ownable {
         if (bidAmount <= INITIAL_BID_AMOUNT) {
             revert HundredDollarAuction__AmountDidNotOutbid();
         }
-        if (s_secondBidder == msg.sender) {
+        if (s_firstBidder == msg.sender) {
             revert HundredDollarAuction__TheSameBidderNotAllowed();
         }
 
@@ -115,34 +139,12 @@ contract HundredDollarAuction is Ownable {
     }
 
     function forfeit() public onlyBidder onlyWithTwoBidders {
-        bool transferedToWinner = i_usdt.transfer(s_opponentBidder[msg.sender], AUCTION_PRICE);
-        if (!transferedToWinner) {
-            revert HundredDollarAuction__TransferFailed();
-        }
-
-        bool collectedBids = i_usdt.transfer(owner(), i_usdt.balanceOf(address(this)));
-        if (!collectedBids) {
-            revert HundredDollarAuction__BidCollectionFailed();
-        }
+        _endAuction(s_opponentBidder[msg.sender]);
     }
 
-    /**
-     * We will need someone to be an Auctioneer.
-     * The role of the auctioneer is to end the auction when either of
-     * the bid gets $100 of more.
-     * Auctioneer will get a 10% commission based on the auction profit.
-     * 
-     * Example:
-     * auctionPrice = $100
-     * winningBid = $110
-     * losingBid = $90
-     * 
-     * collectedBids = winningBid + losingBid // $110 + $90 = $200
-     * 
-     * profit = collectedBids - auctionPrice // $200 - $100 = $100
-     * 
-     * commission = profit * 10% // $100 * 10% = $10
-     */
+    // block.timestamp safe with 15-second rule
+    function cancelAuction() public onlyAuctioneer {}
+
     function overseeAuction() public {
         if (s_auctioneer != address(0)) {
             revert HundredDollarAuction__AuctioneerOccupied();
@@ -164,7 +166,7 @@ contract HundredDollarAuction is Ownable {
             revert HundredDollarAuction__TransferFailed();
         }
 
-        bool collectedBids = i_usdt.transfer(owner(), i_usdt.balanceOf(address(this)));
+        bool collectedBids = i_usdt.transfer(s_factory, i_usdt.balanceOf(address(this)));
         if (!collectedBids) {
             revert HundredDollarAuction__BidCollectionFailed();
         }
