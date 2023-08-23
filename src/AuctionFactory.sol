@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+
 pragma solidity 0.8.18;
 
 import {USDTest} from "./USDTest.sol";
@@ -7,8 +8,12 @@ import {HundredDollarAuction} from "./HundredDollarAuction.sol";
 /**
  * @title AuctionFactory
  * @author Vermont Phil Paguiligan
- * @notice This contract creates an Auction contract which is initiated by a user who wants to enter the auction.
- * This also funds the Auction contract by 100 USDTest upon creation which should be the price of the user who wins the bid.
+ * @notice This contract is the owner of USDTest token and the funder of all the auctions created.
+ * 
+ * Role of this contract:
+ * 
+ * 1. Create an Auction contract which is initiated by a user who wants to oversee an auction.
+ * 2. Fund the Auction contract by 100 USDTest upon creation which should be the price of the winning bidder.
  */
 contract AuctionFactory {
     error AuctionFactory__TransferFailed();
@@ -27,7 +32,7 @@ contract AuctionFactory {
     }
 
     /**
-     * The user who calls this function will become an auctioneer who will oversee the auction.
+     * The user who calls this function will become an auctioneer who will oversee this auction.
      * Upon starting the auction, the user deposits 10 USDTest which will be returned after the auction has ended.
      */
     function openAuction() public {
