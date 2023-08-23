@@ -12,11 +12,11 @@ import {USDTest} from "./USDTest.sol";
 contract USDTestFaucet {
     error USDTestFaucet__FaucetHasZeroBalance();
 
-    USDTest private s_usdt;
     uint256 private constant MAX_AMOUNT_TO_FUND = 100e18;
+    USDTest private immutable i_usdt;
 
     constructor(USDTest usdt) {
-        s_usdt = usdt;
+        i_usdt = usdt;
     }
 
     function requestUSDTest() public {
@@ -25,15 +25,15 @@ contract USDTestFaucet {
         }
 
         if (_balanceUSDT() < MAX_AMOUNT_TO_FUND) {
-            s_usdt.transfer(msg.sender, _balanceUSDT());
+            i_usdt.transfer(msg.sender, _balanceUSDT());
         }
         else {
-            s_usdt.transfer(msg.sender, MAX_AMOUNT_TO_FUND);
+            i_usdt.transfer(msg.sender, MAX_AMOUNT_TO_FUND);
         }
     }
 
     function _balanceUSDT() private view returns (uint256) {
-        return s_usdt.balanceOf(address(this));
+        return i_usdt.balanceOf(address(this));
     }
 
     function getBalanceUSDT() public view returns (uint256) {
@@ -41,6 +41,6 @@ contract USDTestFaucet {
     }
 
     function getUSDTAddress() public view returns (address) {
-        return address(s_usdt);
+        return address(i_usdt);
     }
 }

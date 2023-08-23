@@ -2,8 +2,10 @@
 
 pragma solidity 0.8.18;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import {USDTest} from "./USDTest.sol";
 import {HundredDollarAuction} from "./HundredDollarAuction.sol";
+import {USDTestFaucet} from "./USDTestFaucet.sol";
 
 /**
  * @title AuctionFactory
@@ -15,7 +17,7 @@ import {HundredDollarAuction} from "./HundredDollarAuction.sol";
  * 1. Create an Auction contract which is initiated by a user who wants to oversee an auction.
  * 2. Fund the Auction contract by 100 USDTest upon creation which should be the price of the winning bidder.
  */
-contract AuctionFactory {
+contract AuctionFactory is Ownable {
     error AuctionFactory__TransferFailed();
     error AuctionFactory__MintFailed();
 
@@ -23,12 +25,14 @@ contract AuctionFactory {
     uint256 private constant AUCTIONEERDEPOSIT = 10e18;
 
     address[] private auctionList;
+    address private immutable i_faucet;
     USDTest private immutable i_usdt;
 
     event HundredDollarAuctionCreated(address indexed Auction);
 
-    constructor(USDTest usdt) {
+    constructor(USDTest usdt, address faucet) {
         i_usdt = usdt;
+        i_faucet = faucet;
     }
 
     /**
@@ -53,5 +57,12 @@ contract AuctionFactory {
         }
 
         emit HundredDollarAuctionCreated(address(auction));
+    }
+
+    function fundFaucet(uint256 amountToFund) public onlyOwner {
+        bool minted = i_usdt.mint(i_faucet, amountToFund);
+        if (!minted) {
+            revert AuctionFactory__MintFailed();
+        }
     }
 }
