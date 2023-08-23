@@ -22,7 +22,7 @@ contract AuctionFactory is Ownable {
     error AuctionFactory__MintFailed();
 
     uint256 private constant AUCTION_PRICE = 100e18;
-    uint256 private constant AUCTIONEERDEPOSIT = 10e18;
+    uint256 private constant AMOUNT_DEPOSIT = 10e18;
 
     address[] private auctionList;
     address private immutable i_faucet;
@@ -43,7 +43,7 @@ contract AuctionFactory is Ownable {
         HundredDollarAuction auction = new HundredDollarAuction(i_usdt, msg.sender);
         auctionList.push(address(auction));
 
-        bool success = i_usdt.transferFrom(msg.sender, address(auction), AUCTIONEERDEPOSIT);
+        bool success = i_usdt.transferFrom(msg.sender, address(auction), AMOUNT_DEPOSIT);
         if (!success) {
             revert AuctionFactory__TransferFailed();
         }

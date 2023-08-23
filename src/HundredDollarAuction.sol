@@ -29,6 +29,9 @@ import {USDTest} from "./USDTest.sol";
  *    auction anytime.
  */
 contract HundredDollarAuction {
+    /////////////////
+    // Errors      //
+    /////////////////
     error HundredDollarAuction__TransferFailed();
     error HundredDollarAuction__BidCollectionFailed();
     error HundredDollarAuction__BiddersOccupied();
@@ -40,12 +43,22 @@ contract HundredDollarAuction {
     error HundredDollarAuction__LessThanTwoBidders();
     error HundredDollarAuction__TheSameBidderNotAllowed();
     error HundredDollarAuction__BidderCantOverseeAuction();
+    error HundredDollarAuction__AuctioneerCannotJoinAsBidder();
+    error HundredDollarAuction__AuctionNotYetIdle();
 
+    ////////////////
+    // Enums      //
+    ////////////////
     enum Status { OPEN, WAITING, ACTIVE, CAN_COLLECT, ENDED, CANCELLED }
     enum NumberOfBidders { ZERO, ONE, TWO }
 
+    //////////////////////////
+    // State Variables      //
+    //////////////////////////
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant INITIAL_BID_AMOUNT = 1e18;
+    uint256 private constant AMOUNT_DEPOSIT = 10e18;
+    uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
 
     mapping(address bidder => uint256 bidAmount) private s_bidAmounts;
     // This mapping makes toggling between bidders easier and more gas efficient
@@ -58,9 +71,14 @@ contract HundredDollarAuction {
     address private s_secondBidder;
     address private s_winningBidder;
     uint256 private s_currentBid;
+    uint256 private s_latestTimestamp;
     NumberOfBidders private s_numberOfBidders = NumberOfBidders.ZERO;
     Status private s_status = Status.OPEN;
     USDTest private immutable i_usdt;
+
+    ////////////////////
+    // Functions      //
+    ////////////////////
 
     /**
      * @param usdt the token to bid and to be given as a reward
@@ -89,7 +107,14 @@ contract HundredDollarAuction {
         s_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
+        // block.timestamp safe with 15-second rule
+        s_latestTimestamp = block.timestamp;
     }
+
+
+    ////////////////////
+    // Modifiers      //
+    ////////////////////
 
     modifier onlyBidder {
         if (msg.sender != s_firstBidder || msg.sender != s_secondBidder) {
@@ -112,33 +137,121 @@ contract HundredDollarAuction {
         _;
     }
 
+    ///////////////////////////
+    // Public Functions      //
+    ///////////////////////////
+
+    /**
+     * @param amountToBid the amount user is willing to bid for $100
+     * 
+     * @notice only two bidders can join the auction for this to become active
+     * meaning this function can only be called successfully twice in its entirety
+     */
     function joinAuction(uint256 amountToBid) public {
+        if (msg.sender == s_auctioneer) {
+            revert HundredDollarAuction__AuctioneerCannotJoinAsBidder();
+        }
+
         if (s_firstBidder == address(0)) {
-            _joinAuctionFirstBidder(amountToBid);
+            _joinAuctionAsFirstBidder(amountToBid);
         }
         else {
-            _joinAuctionSecondBidder(amountToBid);
+            _joinAuctionAsSecondBidder(amountToBid);
         }
     }
 
-    function _joinAuctionFirstBidder(uint256 amountToBid) private {
+    /**
+     * @param bidIncrement how much the bidder will increase their bid
+     * @notice outbid your opponent to win the $100 price!!
+     */
+    function outbid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders {
+        uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
+
+        // lower bid than the current is not valid
+        if (amountToBid <= s_bidAmounts[s_opponentBidder[msg.sender]]) {
+            revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
+        }
+
+        s_bidAmounts[msg.sender] = amountToBid;
+        _collectFromBidder(amountToBid);
+        _updateCurrentBidAndWinningBidder(amountToBid);
+    }
+
+    /**
+     * You may not have enough USDTest to outbid the opponent anymore.
+     * Since it's not all about winning, call this function if you want to avoid further loses :)
+     * 
+     * @notice calling this function will make opponent the winner by default.
+     */
+    function forfeit() public onlyBidder onlyWithTwoBidders {
+        _endAuction(s_opponentBidder[msg.sender]);
+    }
+
+    /**
+     * When the auction becomes idle, the auctioneer can choose to cancel the auction anytime.
+     */
+    function cancelAuction() public onlyAuctioneer {
+        if (!_isIdle()) {
+            revert HundredDollarAuction__AuctionNotYetIdle();
+        }
+
+        NumberOfBidders numberOfBidders = s_numberOfBidders;
+        address firstBidder = s_firstBidder;
+        if (numberOfBidders == NumberOfBidders.ZERO) {
+            // when the auction doesn't get any bidder
+            _returnDepositAndFunds();
+        }
+        else if (numberOfBidders == NumberOfBidders.ONE) {
+            // when the auction doesn't get a second bidder
+            _returnDepositAndFunds();
+            _transferUsdt(firstBidder, s_bidAmounts[firstBidder]);
+        }
+        else {
+            // punish the bidder who becomes idle
+        }
+        s_status = Status.CANCELLED;
+    }
+
+    function endAuction() public onlyAuctioneer {
+        _endAuction(s_winningBidder);
+    }
+
+    ////////////////////////////
+    // Private Functions      //
+    ////////////////////////////
+
+    /**
+     * @param amountToBid the amount set by first bidder which should be more than or equal to INITIAL_BID_AMOUNT ($1).
+     * @notice the bidder will occupy the s_firstBidder slot
+     */
+    function _joinAuctionAsFirstBidder(uint256 amountToBid) private {
+        // starting amount should be $1 or more
         if (amountToBid <= INITIAL_BID_AMOUNT) {
             revert HundredDollarAuction__AmountIsLessThanInitialBidOfOneUSDT(amountToBid);
         }
 
         s_firstBidder = msg.sender;
         s_bidAmounts[s_firstBidder] = amountToBid;
-        _updateCurrentBid(amountToBid);
         s_numberOfBidders = NumberOfBidders.ONE;
+        s_status = Status.WAITING;
+        _collectFromBidder(amountToBid);
+        _updateCurrentBid(amountToBid);
     }
 
-    function _joinAuctionSecondBidder(uint256 amountToBid) private {
+    /**
+     * @param amountToBid the amount set by second bidder which should be more than the bid of first bidder.
+     * @notice the bidder will occupy the s_secondBidder slot
+     */
+    function _joinAuctionAsSecondBidder(uint256 amountToBid) private {
+        // only to bidders should be able to enter this auction
         if (s_secondBidder != address(0)) {
             revert HundredDollarAuction__BiddersOccupied();
         }
+        // should outbid the first bidder
         if (amountToBid <= s_bidAmounts[s_firstBidder]) {
             revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
         }
+        // make this auction more fun! two bidders should be different :)
         if (s_firstBidder == msg.sender) {
             revert HundredDollarAuction__TheSameBidderNotAllowed();
         }
@@ -150,39 +263,30 @@ contract HundredDollarAuction {
 
         s_opponentBidder[s_firstBidder] = s_secondBidder;
         s_opponentBidder[s_secondBidder] = s_firstBidder;
+        _collectFromBidder(amountToBid);
         _updateCurrentBidAndWinningBidder(amountToBid);
     }
 
-    function outBid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders {
-        uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
-        if (amountToBid <= s_bidAmounts[s_opponentBidder[msg.sender]]) {
-            revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
-        }
-
-        s_bidAmounts[msg.sender] = amountToBid;
-        _updateCurrentBidAndWinningBidder(amountToBid);
+    // when the auction gets cancelled,
+    function _returnDepositAndFunds() private {
+        // return the deposit of auctioneer
+        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT);
+        // return the funds to auction factory
+        _transferUsdt(s_factory, AUCTION_PRICE);
     }
 
-    function forfeit() public onlyBidder onlyWithTwoBidders {
-        _endAuction(s_opponentBidder[msg.sender]);
+    function _transferUsdt(address to, uint256 amount) private {
+        bool success = i_usdt.transfer(to, amount);
+        if (!success) {
+            revert HundredDollarAuction__TransferFailed();
+        }
     }
 
-    // block.timestamp safe with 15-second rule
-    function cancelAuction() public onlyAuctioneer {}
-
-    function overseeAuction() public {
-        if (s_auctioneer != address(0)) {
-            revert HundredDollarAuction__AuctioneerOccupied();
+    function _collectFromBidder(uint256 amountToBid) private {
+        bool success = i_usdt.transferFrom(msg.sender, address(this), amountToBid);
+        if (!success) {
+            revert HundredDollarAuction__TransferFailed();
         }
-        if (msg.sender == s_firstBidder || msg.sender == s_secondBidder) {
-            revert HundredDollarAuction__BidderCantOverseeAuction();
-        }
-
-        s_auctioneer = msg.sender;
-    }
-
-    function endAuction() public onlyAuctioneer {
-        _endAuction(s_winningBidder);
     }
 
     function _endAuction(address winner) private {
@@ -216,11 +320,35 @@ contract HundredDollarAuction {
         _updateWinningBidder();
     }
 
+    /////////////////////////////////
+    // Private View Functions      //
+    /////////////////////////////////
+
+    function _idleTime() private view returns (uint256) {
+        return block.timestamp - s_latestTimestamp;
+    }
+
+    function _isIdle() private view returns (bool) {
+        return _idleTime() > MIN_WAITING_TIME;
+    }
+
+    ////////////////////////////////
+    // Public View Functions      //
+    ////////////////////////////////
+
     function getStatus() public view returns (Status) {
         return s_status;
     }
 
     function getNumberOfBidders() public view returns (NumberOfBidders) {
         return s_numberOfBidders;
+    }
+
+    function getIdleTime() public view returns (uint256) {
+        return _idleTime();
+    }
+
+    function getIsIdle() public view returns (bool) {
+        return _isIdle();
     }
 }
