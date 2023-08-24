@@ -110,8 +110,7 @@ contract HundredDollarAuction {
         i_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
-        // block.timestamp safe with 15-second rule
-        s_latestTimestamp = block.timestamp;
+        _updateTimestamp();
     }
 
 
@@ -169,6 +168,8 @@ contract HundredDollarAuction {
         else {
             _joinAuctionAsSecondBidder(amountToBid);
         }
+
+        _updateTimestamp();
     }
 
     /**
@@ -186,6 +187,8 @@ contract HundredDollarAuction {
         s_bidAmounts[msg.sender] = amountToBid;
         _collectFromBidder(amountToBid);
         _updateCurrentBidAndWinningBidder(amountToBid);
+
+        _updateTimestamp();
     }
 
     /**
@@ -232,8 +235,8 @@ contract HundredDollarAuction {
             _transferUsdt(i_factory, AUCTION_PRICE + amountToCollect);
 
             // refund auctioneer and winning bidder with rewards
-            _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + amountToReward);
             _transferUsdt(s_winningBidder, s_bidAmounts[s_winningBidder] + amountToReward);
+            _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + amountToReward);
         }
         s_status = Status.CANCELLED;
     }
@@ -295,10 +298,10 @@ contract HundredDollarAuction {
 
     // when the auction gets cancelled,
     function _returnDepositAndFunds() private {
-        // return the deposit of auctioneer
-        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT);
         // return the funds to auction factory
         _transferUsdt(i_factory, AUCTION_PRICE);
+        // return the deposit of auctioneer
+        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT);
     }
 
     function _transferUsdt(address to, uint256 amount) private {
@@ -327,8 +330,8 @@ contract HundredDollarAuction {
         uint256 retrieveAmount = totalBids - auctioneerReward;
 
         _transferUsdt(i_factory, retrieveAmount);
-        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
         _transferUsdt(winner, AUCTION_PRICE);
+        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
 
         s_status = Status.ENDED;
     }
@@ -348,6 +351,11 @@ contract HundredDollarAuction {
     function _updateCurrentBidAndWinningBidder(uint256 amountToBid) private {
         _updateCurrentBid(amountToBid);
         _updateWinningBidder();
+    }
+
+    function _updateTimestamp() private {
+        // block.timestamp safe with 15-second rule
+        s_latestTimestamp = block.timestamp;
     }
 
     /////////////////////////////////
