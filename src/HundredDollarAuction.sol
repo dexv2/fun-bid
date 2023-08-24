@@ -45,6 +45,7 @@ contract HundredDollarAuction {
     error HundredDollarAuction__BidderCantOverseeAuction();
     error HundredDollarAuction__AuctioneerCannotJoinAsBidder();
     error HundredDollarAuction__AuctionNotYetIdle();
+    error HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
 
     ////////////////
     // Enums      //
@@ -73,7 +74,8 @@ contract HundredDollarAuction {
     address private s_secondBidder;
     address private s_winningBidder;
     uint256 private s_currentBid;
-    uint256 private s_latestTimestamp;
+    // block.timestamp safe with 15-second rule
+    uint256 private s_latestTimestamp = block.timestamp;
     NumberOfBidders private s_numberOfBidders = NumberOfBidders.ZERO;
     Status private s_status = Status.OPEN;
     address private immutable i_factory;
@@ -88,7 +90,7 @@ contract HundredDollarAuction {
      * @param auctioneer the entity who oversees the auction
      * 
      * Role of the auctioneer:
-     * 1. End the auction when either of the bid gets $100 of more.
+     * 1. End the auction when either of the bid gets $100 or more.
      * 2. Cancel the auction if it is idle for a given time.
      * 
      * Auctioneer will get a 10% commission based on the auction profit.
@@ -110,7 +112,6 @@ contract HundredDollarAuction {
         i_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
-        _updateTimestamp();
     }
 
 
@@ -192,9 +193,6 @@ contract HundredDollarAuction {
     }
 
     /**
-     * You may not have enough USDTest to outbid the opponent anymore.
-     * Since it's not all about winning, call this function if you want to avoid further loses :)
-     * 
      * @notice calling this function will make opponent the winner by default.
      */
     function forfeit() public onlyBidder onlyWithTwoBidders {
@@ -242,6 +240,11 @@ contract HundredDollarAuction {
     }
 
     function endAuction() public onlyAuctioneer {
+        // Auctioneer can end the auction when either of the bid gets $100 or more.
+        if (s_bidAmounts[s_winningBidder] < AUCTION_PRICE) {
+            revert HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
+        }
+
         _endAuction(s_winningBidder);
     }
 
@@ -320,11 +323,11 @@ contract HundredDollarAuction {
 
     function _endAuction(address winner) private {
         uint256 totalBids = _totalBids();
-        // reward the auctioneer based on the auction gains
-        int256 auctionGain = int256(totalBids - AUCTION_PRICE);
+        // reward the auctioneer based on the auction profit
+        int256 auctionProfit = int256(totalBids - AUCTION_PRICE);
         uint256 auctioneerReward;
-        if (auctionGain > 0) {
-            auctioneerReward = uint256(auctionGain) * REWARD_THRESHOLD / PRECISION;
+        if (auctionProfit > 0) {
+            auctioneerReward = uint256(auctionProfit) * REWARD_THRESHOLD / PRECISION;
         }
         // amount to return to factory
         uint256 retrieveAmount = totalBids - auctioneerReward;
@@ -354,7 +357,6 @@ contract HundredDollarAuction {
     }
 
     function _updateTimestamp() private {
-        // block.timestamp safe with 15-second rule
         s_latestTimestamp = block.timestamp;
     }
 
