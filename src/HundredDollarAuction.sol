@@ -37,7 +37,7 @@ contract HundredDollarAuction {
     error HundredDollarAuction__BiddersOccupied();
     error HundredDollarAuction__AuctioneerOccupied();
     error HundredDollarAuction__AmountDidNotOutbid(uint256 currentBid, uint256 amountToBid);
-    error HundredDollarAuction__AmountIsLessThanInitialBidOfOneUSDT(uint256 amountToBid);
+    error HundredDollarAuction__BelowMinimumBidAmount(uint256 amountToBid);
     error HundredDollarAuction__NotABidder();
     error HundredDollarAuction__NotAnAuctioneer();
     error HundredDollarAuction__LessThanTwoBidders();
@@ -56,7 +56,7 @@ contract HundredDollarAuction {
     // State Variables      //
     //////////////////////////
     uint256 private constant AUCTION_PRICE = 100e18;
-    uint256 private constant INITIAL_BID_AMOUNT = 1e18;
+    uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
     uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
     uint256 private constant FACTORY_COLLECTION_THRESHOLD = 80;
@@ -140,6 +140,14 @@ contract HundredDollarAuction {
         _;
     }
 
+    modifier bidAmountChecked(uint256 amountToBid) {
+        // minimum amount should be $1
+        if (amountToBid < MINIMUM_BID_AMOUNT) {
+            revert HundredDollarAuction__BelowMinimumBidAmount(amountToBid);
+        }
+        _;
+    }
+
     ///////////////////////////
     // Public Functions      //
     ///////////////////////////
@@ -150,7 +158,7 @@ contract HundredDollarAuction {
      * @notice only two bidders can join the auction for this to become active
      * meaning this function can only be called successfully twice in its entirety
      */
-    function joinAuction(uint256 amountToBid) public {
+    function joinAuction(uint256 amountToBid) public bidAmountChecked(amountToBid) {
         if (msg.sender == s_auctioneer) {
             revert HundredDollarAuction__AuctioneerCannotJoinAsBidder();
         }
@@ -167,7 +175,7 @@ contract HundredDollarAuction {
      * @param bidIncrement how much the bidder will increase their bid
      * @notice outbid your opponent to win the $100 price!!
      */
-    function outbid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders {
+    function outbid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders bidAmountChecked(bidIncrement) {
         uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
 
         // lower bid than the current is not valid
@@ -208,13 +216,8 @@ contract HundredDollarAuction {
             // when the auction doesn't get a second bidder
             _returnDepositAndFunds();
 
-            uint256 firstBidderRefund = s_bidAmounts[s_firstBidder];
-
-            // reset first bidder amount to zero
-            s_bidAmounts[s_firstBidder] = 0;
-
             // refund first bidder
-            _transferUsdt(firstBidder, firstBidderRefund);
+            _transferUsdt(firstBidder, s_bidAmounts[s_firstBidder]);
         }
         else {
             // punish the bidder who becomes idle, idle bidder's bid will be taken and divided by this contract:
@@ -224,18 +227,13 @@ contract HundredDollarAuction {
             // 10% to reward the auctioneer
             // 10% to reward the other bidder
             uint256 amountToReward = amountTaken * REWARD_THRESHOLD / PRECISION;
-            uint256 winningBidderToRefund = s_bidAmounts[s_winningBidder];
-
-            // reset both bid amounts to zero
-            s_bidAmounts[s_firstBidder] = 0;
-            s_bidAmounts[s_secondBidder] = 0;
 
             // retrieve auction price with amount taken
             _transferUsdt(i_factory, AUCTION_PRICE + amountToCollect);
 
             // refund auctioneer and winning bidder with rewards
             _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + amountToReward);
-            _transferUsdt(s_winningBidder, winningBidderToRefund + amountToReward);
+            _transferUsdt(s_winningBidder, s_bidAmounts[s_winningBidder] + amountToReward);
         }
         s_status = Status.CANCELLED;
     }
@@ -249,13 +247,13 @@ contract HundredDollarAuction {
     ////////////////////////////
 
     /**
-     * @param amountToBid the amount set by first bidder which should be more than or equal to INITIAL_BID_AMOUNT ($1).
+     * @param amountToBid the amount set by first bidder which should be more than or equal to MINIMUM_BID_AMOUNT ($1).
      * @notice the bidder will occupy the s_firstBidder slot
      */
     function _joinAuctionAsFirstBidder(uint256 amountToBid) private {
-        // starting amount should be $1 or more
-        if (amountToBid <= INITIAL_BID_AMOUNT) {
-            revert HundredDollarAuction__AmountIsLessThanInitialBidOfOneUSDT(amountToBid);
+        // minimum amount should be $1
+        if (amountToBid < MINIMUM_BID_AMOUNT) {
+            revert HundredDollarAuction__BelowMinimumBidAmount(amountToBid);
         }
 
         s_firstBidder = msg.sender;
@@ -285,7 +283,7 @@ contract HundredDollarAuction {
         }
 
         s_secondBidder = msg.sender;
-        s_bidAmounts[s_secondBidder] = INITIAL_BID_AMOUNT;
+        s_bidAmounts[s_secondBidder] = MINIMUM_BID_AMOUNT;
         s_status = Status.ACTIVE;
         s_numberOfBidders = NumberOfBidders.TWO;
 
@@ -318,15 +316,19 @@ contract HundredDollarAuction {
     }
 
     function _endAuction(address winner) private {
-        bool transferedToWinner = i_usdt.transfer(winner, AUCTION_PRICE);
-        if (!transferedToWinner) {
-            revert HundredDollarAuction__TransferFailed();
+        uint256 totalBids = _totalBids();
+        // reward the auctioneer based on the auction gains
+        int256 auctionGain = int256(totalBids - AUCTION_PRICE);
+        uint256 auctioneerReward;
+        if (auctionGain > 0) {
+            auctioneerReward = uint256(auctionGain) * REWARD_THRESHOLD / PRECISION;
         }
+        // amount to return to factory
+        uint256 retrieveAmount = totalBids - auctioneerReward;
 
-        bool collectedBids = i_usdt.transfer(i_factory, i_usdt.balanceOf(address(this)));
-        if (!collectedBids) {
-            revert HundredDollarAuction__BidCollectionFailed();
-        }
+        _transferUsdt(i_factory, retrieveAmount);
+        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
+        _transferUsdt(winner, AUCTION_PRICE);
 
         s_status = Status.ENDED;
     }
@@ -358,6 +360,10 @@ contract HundredDollarAuction {
 
     function _isIdle() private view returns (bool) {
         return _idleTime() > MIN_WAITING_TIME;
+    }
+
+    function _totalBids() private view returns (uint256) {
+        return s_bidAmounts[s_firstBidder] + s_bidAmounts[s_secondBidder];
     }
 
     ////////////////////////////////
