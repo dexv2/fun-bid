@@ -59,13 +59,15 @@ contract HundredDollarAuction {
     uint256 private constant INITIAL_BID_AMOUNT = 1e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
     uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
+    uint256 private constant FACTORY_COLLECTION_THRESHOLD = 80;
+    uint256 private constant REWARD_THRESHOLD = 10;
+    uint256 private constant PRECISION = 100;
 
     mapping(address bidder => uint256 bidAmount) private s_bidAmounts;
     // This mapping makes toggling between bidders easier and more gas efficient
     // instead of finding bidder and opponent bidder everytime.
     mapping(address bidder => address opponentBidder) private s_opponentBidder;
 
-    address private s_factory;
     address private s_auctioneer;
     address private s_firstBidder;
     address private s_secondBidder;
@@ -74,6 +76,7 @@ contract HundredDollarAuction {
     uint256 private s_latestTimestamp;
     NumberOfBidders private s_numberOfBidders = NumberOfBidders.ZERO;
     Status private s_status = Status.OPEN;
+    address private immutable i_factory;
     USDTest private immutable i_usdt;
 
     ////////////////////
@@ -104,7 +107,7 @@ contract HundredDollarAuction {
      * commission = profit * 10% // $100 * 10% = $10
      */
     constructor(USDTest usdt, address auctioneer) {
-        s_factory = msg.sender;
+        i_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
         // block.timestamp safe with 15-second rule
@@ -204,10 +207,35 @@ contract HundredDollarAuction {
         else if (numberOfBidders == NumberOfBidders.ONE) {
             // when the auction doesn't get a second bidder
             _returnDepositAndFunds();
-            _transferUsdt(firstBidder, s_bidAmounts[firstBidder]);
+
+            uint256 firstBidderRefund = s_bidAmounts[s_firstBidder];
+
+            // reset first bidder amount to zero
+            s_bidAmounts[s_firstBidder] = 0;
+
+            // refund first bidder
+            _transferUsdt(firstBidder, firstBidderRefund);
         }
         else {
-            // punish the bidder who becomes idle
+            // punish the bidder who becomes idle, idle bidder's bid will be taken and divided by this contract:
+            uint256 amountTaken = s_bidAmounts[s_opponentBidder[s_winningBidder]];
+            // 80% will be collected by auction factory
+            uint256 amountToCollect = amountTaken * FACTORY_COLLECTION_THRESHOLD / PRECISION;
+            // 10% to reward the auctioneer
+            // 10% to reward the other bidder
+            uint256 amountToReward = amountTaken * REWARD_THRESHOLD / PRECISION;
+            uint256 winningBidderToRefund = s_bidAmounts[s_winningBidder];
+
+            // reset both bid amounts to zero
+            s_bidAmounts[s_firstBidder] = 0;
+            s_bidAmounts[s_secondBidder] = 0;
+
+            // retrieve auction price with amount taken
+            _transferUsdt(i_factory, AUCTION_PRICE + amountToCollect);
+
+            // refund auctioneer and winning bidder with rewards
+            _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + amountToReward);
+            _transferUsdt(s_winningBidder, winningBidderToRefund + amountToReward);
         }
         s_status = Status.CANCELLED;
     }
@@ -272,7 +300,7 @@ contract HundredDollarAuction {
         // return the deposit of auctioneer
         _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT);
         // return the funds to auction factory
-        _transferUsdt(s_factory, AUCTION_PRICE);
+        _transferUsdt(i_factory, AUCTION_PRICE);
     }
 
     function _transferUsdt(address to, uint256 amount) private {
@@ -295,7 +323,7 @@ contract HundredDollarAuction {
             revert HundredDollarAuction__TransferFailed();
         }
 
-        bool collectedBids = i_usdt.transfer(s_factory, i_usdt.balanceOf(address(this)));
+        bool collectedBids = i_usdt.transfer(i_factory, i_usdt.balanceOf(address(this)));
         if (!collectedBids) {
             revert HundredDollarAuction__BidCollectionFailed();
         }
