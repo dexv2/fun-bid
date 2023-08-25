@@ -12,7 +12,7 @@ import {USDT} from "./USDT.sol";
 contract USDTFaucet {
     error USDTFaucet__FaucetHasZeroBalance();
 
-    uint256 private constant MAX_AMOUNT_TO_FUND = 100e18;
+    uint256 private constant MAX_AMOUNT_TO_FUND = 200e18;
     USDT private immutable i_usdt;
 
     constructor(USDT usdt) {

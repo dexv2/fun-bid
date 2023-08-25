@@ -3,7 +3,52 @@
 pragma solidity 0.8.18;
 
 import {Test} from "forge-std/Test.sol";
+import {DeployAuctionFactory} from "../../script/DeployAuctionFactory.s.sol";
+import {AuctionFactory} from "../../src/AuctionFactory.sol";
+import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
+import {USDTFaucet} from "../../src/USDTFaucet.sol";
+import {USDT} from "../../src/USDT.sol";
 
+// Auction Contract balance should be 0 after the auction ends
 contract HundredDollarAuctionTest is Test {
-    // Auction Contract balance should be 0 after the auction ends
+    AuctionFactory factory;
+    USDTFaucet faucet;
+    USDT usdt;
+
+    address public ALICE = makeAddr("alice");
+    address public BILLY = makeAddr("billy");
+    address public CINDY = makeAddr("cindy");
+    address public AUCTIONEER = makeAddr("auctioneer");
+    uint256 private constant AUCTION_PRICE = 100e18;
+    uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
+    uint256 private constant AMOUNT_DEPOSIT = 10e18;
+
+    function setUp() public {
+        DeployAuctionFactory deployer = new DeployAuctionFactory();
+        (factory, usdt, faucet) = deployer.run();
+
+        // fund users to test
+        vm.prank(ALICE);
+        faucet.requestUSDT();
+        vm.prank(BILLY);
+        faucet.requestUSDT();
+        vm.prank(CINDY);
+        faucet.requestUSDT();
+        vm.prank(AUCTIONEER);
+        faucet.requestUSDT();
+    }
+
+    function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public {
+        uint256 startingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
+
+        vm.startPrank(AUCTIONEER);
+        usdt.approve(address(factory), AMOUNT_DEPOSIT);
+        address auction = address(factory.openAuction());
+        vm.stopPrank();
+
+        uint256 endingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
+
+        assertEq(usdt.balanceOf(auction), AUCTION_PRICE + AMOUNT_DEPOSIT);
+        assertEq(endingAuctioneerBalance, startingAuctioneerBalance - AMOUNT_DEPOSIT);
+    }
 }
