@@ -2,26 +2,26 @@
 
 pragma solidity 0.8.18;
 
-import {USDTest} from "./USDTest.sol";
+import {USDT} from "./USDT.sol";
 
 /**
- * @title USDTestFaucet
+ * @title USDTFaucet
  * @author Vermont Phil Paguiligan
  * @notice This contract funds users to use the HundredDollarAuction contract as Bidder of Auctioneer
  */
-contract USDTestFaucet {
-    error USDTestFaucet__FaucetHasZeroBalance();
+contract USDTFaucet {
+    error USDTFaucet__FaucetHasZeroBalance();
 
     uint256 private constant MAX_AMOUNT_TO_FUND = 100e18;
-    USDTest private immutable i_usdt;
+    USDT private immutable i_usdt;
 
-    constructor(USDTest usdt) {
+    constructor(USDT usdt) {
         i_usdt = usdt;
     }
 
-    function requestUSDTest() public {
+    function requestUSDT() public {
         if (_balanceUSDT() == 0) {
-            revert USDTestFaucet__FaucetHasZeroBalance();
+            revert USDTFaucet__FaucetHasZeroBalance();
         }
 
         if (_balanceUSDT() < MAX_AMOUNT_TO_FUND) {

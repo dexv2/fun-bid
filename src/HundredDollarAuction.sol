@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.18;
 
-import {USDTest} from "./USDTest.sol";
+import {USDT} from "./USDT.sol";
 
 /**
  * @title HundredDollarAuction
@@ -16,7 +16,7 @@ import {USDTest} from "./USDTest.sol";
  * 
  * BUY MY $100 FOR ONLY $1.
  * 
- * @notice This contract holds 100 USDTest which can be bought for at least 1 USDTest.
+ * @notice This contract holds 100 USDT which can be bought for at least 1 USDT.
  * 
  * But here's the catch:
  * 
@@ -94,7 +94,7 @@ contract HundredDollarAuction {
     NumberOfBidders private s_numberOfBidders = NumberOfBidders.ZERO;
     Status private s_status = Status.OPEN;
     address private immutable i_factory;
-    USDTest private immutable i_usdt;
+    USDT private immutable i_usdt;
 
     ////////////////////
     // Functions      //
@@ -123,12 +123,11 @@ contract HundredDollarAuction {
      * 
      * commission = profit * 10% // $100 * 10% = $10
      */
-    constructor(USDTest usdt, address auctioneer) {
+    constructor(USDT usdt, address auctioneer) {
         i_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
     }
-
 
     ////////////////////
     // Modifiers      //

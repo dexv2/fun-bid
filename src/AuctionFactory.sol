@@ -3,19 +3,19 @@
 pragma solidity 0.8.18;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import {USDTest} from "./USDTest.sol";
+import {USDT} from "./USDT.sol";
 import {HundredDollarAuction} from "./HundredDollarAuction.sol";
-import {USDTestFaucet} from "./USDTestFaucet.sol";
+import {USDTFaucet} from "./USDTFaucet.sol";
 
 /**
  * @title AuctionFactory
  * @author Vermont Phil Paguiligan
- * @notice This contract is the owner of USDTest token and the funder of all the auctions created.
+ * @notice This contract is the owner of USDT token and the funder of all the auctions created.
  * 
  * Role of this contract:
  * 
  * 1. Create an Auction contract which is initiated by a user who wants to oversee an auction.
- * 2. Fund the Auction contract by 100 USDTest upon creation which should be the price of the winning bidder.
+ * 2. Fund the Auction contract by 100 USDT upon creation which should be the price of the winning bidder.
  */
 contract AuctionFactory is Ownable {
     error AuctionFactory__TransferFailed();
@@ -26,18 +26,18 @@ contract AuctionFactory is Ownable {
 
     address[] private auctionList;
     address private immutable i_faucet;
-    USDTest private immutable i_usdt;
+    USDT private immutable i_usdt;
 
     event HundredDollarAuctionCreated(address indexed Auction);
 
-    constructor(USDTest usdt, address faucet) {
+    constructor(USDT usdt, address faucet) {
         i_usdt = usdt;
         i_faucet = faucet;
     }
 
     /**
      * The user who calls this function will become an auctioneer who will oversee this auction.
-     * Upon starting the auction, the user deposits 10 USDTest which will be returned after the auction has ended.
+     * Upon starting the auction, the user deposits 10 USDT which will be returned after the auction has ended.
      */
     function openAuction() public {
         HundredDollarAuction auction = new HundredDollarAuction(i_usdt, msg.sender);
