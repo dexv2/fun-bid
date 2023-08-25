@@ -47,6 +47,21 @@ contract HundredDollarAuction {
     error HundredDollarAuction__AuctionNotYetIdle();
     error HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
 
+    /////////////////
+    // Events      //
+    /////////////////
+    event BidAdded(address indexed auction, address indexed bidder, address indexed opponentBidder, uint256 amountBid);
+    event AuctionEnded(
+        address indexed auction,
+        address indexed winningBidder,
+        address indexed auctioneer,
+        address losingBidder,
+        uint256 winningBid,
+        uint256 losingBid,
+        uint256 totalBids
+    );
+    event AuctionCancelled(address indexed auction, address indexed auctioneer, uint256 amountCollected);
+
     ////////////////
     // Enums      //
     ////////////////
