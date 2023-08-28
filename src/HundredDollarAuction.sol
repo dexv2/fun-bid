@@ -423,4 +423,8 @@ contract HundredDollarAuction is ReentrancyGuard {
     function getCurrentBid() public view returns (uint256) {
         return s_currentBid;
     }
+
+    function getLatestTimestamp() public view returns (uint256) {
+        return s_latestTimestamp;
+    }
 }
