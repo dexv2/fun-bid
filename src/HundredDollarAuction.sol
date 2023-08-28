@@ -2,6 +2,7 @@
 
 pragma solidity 0.8.18;
 
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {USDT} from "./USDT.sol";
 
 /**
@@ -28,7 +29,7 @@ import {USDT} from "./USDT.sol";
  * 4. When either of the bid reaches $100, the auctioneer can end the
  *    auction anytime.
  */
-contract HundredDollarAuction {
+contract HundredDollarAuction is ReentrancyGuard {
     /////////////////
     // Errors      //
     /////////////////
@@ -172,7 +173,7 @@ contract HundredDollarAuction {
      * @notice only two bidders can join the auction for this to become active
      * meaning this function can only be called successfully twice in its entirety
      */
-    function joinAuction(uint256 amountToBid) public bidAmountChecked(amountToBid) {
+    function joinAuction(uint256 amountToBid) public nonReentrant bidAmountChecked(amountToBid) {
         if (msg.sender == s_auctioneer) {
             revert HundredDollarAuction__AuctioneerCannotJoinAsBidder();
         }
@@ -191,7 +192,13 @@ contract HundredDollarAuction {
      * @param bidIncrement how much the bidder will increase their bid
      * @notice outbid your opponent to win the $100 price!!
      */
-    function outbid(uint256 bidIncrement) public onlyBidder onlyWithTwoBidders bidAmountChecked(bidIncrement) {
+    function outbid(uint256 bidIncrement)
+        public
+        nonReentrant
+        onlyBidder
+        onlyWithTwoBidders
+        bidAmountChecked(bidIncrement)
+    {
         uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
 
         // lower bid than the current is not valid
@@ -209,14 +216,14 @@ contract HundredDollarAuction {
     /**
      * @notice calling this function will make opponent the winner by default.
      */
-    function forfeit() public onlyBidder onlyWithTwoBidders {
+    function forfeit() public nonReentrant onlyBidder onlyWithTwoBidders {
         _endAuction(s_opponentBidder[msg.sender]);
     }
 
     /**
      * When the auction becomes idle, the auctioneer can choose to cancel the auction anytime.
      */
-    function cancelAuction() public onlyAuctioneer {
+    function cancelAuction() public nonReentrant onlyAuctioneer {
         if (!_isIdle()) {
             revert HundredDollarAuction__AuctionNotYetIdle();
         }
@@ -253,7 +260,7 @@ contract HundredDollarAuction {
         s_status = Status.CANCELLED;
     }
 
-    function endAuction() public onlyAuctioneer {
+    function endAuction() public nonReentrant onlyAuctioneer {
         // Auctioneer can end the auction when either of the bid gets $100 or more.
         if (s_bidAmounts[s_winningBidder] < AUCTION_PRICE) {
             revert HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
