@@ -23,13 +23,11 @@ contract HundredDollarAuctionTest is Test {
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
-    uint256 private startingBalance;
+    uint256 private startingAuctioneerBalance;
 
     function setUp() public {
         DeployAuctionFactory deployer = new DeployAuctionFactory();
         (factory, usdt, faucet) = deployer.run();
-
-        startingBalance = faucet.getRequestAmount();
 
         // fund users to test
         vm.prank(ALICE);
@@ -40,26 +38,35 @@ contract HundredDollarAuctionTest is Test {
         faucet.requestUSDT();
         vm.prank(AUCTIONEER);
         faucet.requestUSDT();
-    }
 
-    modifier auctionCreated {
+        startingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
+
+        // create auction
         vm.startPrank(AUCTIONEER);
         usdt.approve(address(factory), AMOUNT_DEPOSIT);
         auction = factory.openAuction();
         vm.stopPrank();
-        _;
     }
 
-    function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public auctionCreated {
+    function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public {
         uint256 endingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
 
         assertEq(usdt.balanceOf(address(auction)), AUCTION_PRICE + AMOUNT_DEPOSIT);
-        assertEq(endingAuctioneerBalance, startingBalance - AMOUNT_DEPOSIT);
+        assertEq(endingAuctioneerBalance, startingAuctioneerBalance - AMOUNT_DEPOSIT);
     }
 
-    function testAuctioneerCantJoinAuction() public auctionCreated {
+    function testAuctioneerCantJoinAuction() public {
         vm.expectRevert(HundredDollarAuction.HundredDollarAuction__AuctioneerCannotJoinAsBidder.selector);
         vm.prank(AUCTIONEER);
         auction.joinAuction(MINIMUM_BID_AMOUNT);
+    }
+
+    function testCannotJoinWithBelowMinimumBidAmount() public {
+        uint256 amountToBid = MINIMUM_BID_AMOUNT - 1;
+        vm.expectRevert(
+            abi.encodeWithSelector(HundredDollarAuction.HundredDollarAuction__BelowMinimumBidAmount.selector, amountToBid)
+        );
+        vm.prank(AUCTIONEER);
+        auction.joinAuction(amountToBid);
     }
 }

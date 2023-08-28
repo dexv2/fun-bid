@@ -271,11 +271,6 @@ contract HundredDollarAuction {
      * @notice the bidder will occupy the s_firstBidder slot
      */
     function _joinAuctionAsFirstBidder(uint256 amountToBid) private {
-        // minimum amount should be $1
-        if (amountToBid < MINIMUM_BID_AMOUNT) {
-            revert HundredDollarAuction__BelowMinimumBidAmount(amountToBid);
-        }
-
         s_firstBidder = msg.sender;
         s_bidAmounts[s_firstBidder] = amountToBid;
         s_numberOfBidders = NumberOfBidders.ONE;
