@@ -12,7 +12,7 @@ import {USDT} from "./USDT.sol";
 contract USDTFaucet {
     error USDTFaucet__FaucetHasZeroBalance();
 
-    uint256 private constant MAX_AMOUNT_TO_FUND = 200e18;
+    uint256 private constant REQUEST_AMOUNT = 200e18;
     USDT private immutable i_usdt;
 
     constructor(USDT usdt) {
@@ -20,27 +20,31 @@ contract USDTFaucet {
     }
 
     function requestUSDT() public {
-        if (_balanceUSDT() == 0) {
+        if (_faucetBalanceUSDT() == 0) {
             revert USDTFaucet__FaucetHasZeroBalance();
         }
 
-        if (_balanceUSDT() < MAX_AMOUNT_TO_FUND) {
-            i_usdt.transfer(msg.sender, _balanceUSDT());
+        if (_faucetBalanceUSDT() < REQUEST_AMOUNT) {
+            i_usdt.transfer(msg.sender, _faucetBalanceUSDT());
         }
         else {
-            i_usdt.transfer(msg.sender, MAX_AMOUNT_TO_FUND);
+            i_usdt.transfer(msg.sender, REQUEST_AMOUNT);
         }
     }
 
-    function _balanceUSDT() private view returns (uint256) {
+    function _faucetBalanceUSDT() private view returns (uint256) {
         return i_usdt.balanceOf(address(this));
     }
 
-    function getBalanceUSDT() public view returns (uint256) {
-        return _balanceUSDT();
+    function getFaucetBalanceUSDT() public view returns (uint256) {
+        return _faucetBalanceUSDT();
     }
 
     function getUSDTAddress() public view returns (address) {
         return address(i_usdt);
+    }
+
+    function getRequestAmount() public pure returns (uint256) {
+        return REQUEST_AMOUNT;
     }
 }

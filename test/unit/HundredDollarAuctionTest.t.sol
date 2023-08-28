@@ -14,6 +14,7 @@ contract HundredDollarAuctionTest is Test {
     AuctionFactory factory;
     USDTFaucet faucet;
     USDT usdt;
+    HundredDollarAuction auction;
 
     address public ALICE = makeAddr("alice");
     address public BILLY = makeAddr("billy");
@@ -22,10 +23,13 @@ contract HundredDollarAuctionTest is Test {
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
+    uint256 private startingBalance;
 
     function setUp() public {
         DeployAuctionFactory deployer = new DeployAuctionFactory();
         (factory, usdt, faucet) = deployer.run();
+
+        startingBalance = faucet.getRequestAmount();
 
         // fund users to test
         vm.prank(ALICE);
@@ -38,17 +42,24 @@ contract HundredDollarAuctionTest is Test {
         faucet.requestUSDT();
     }
 
-    function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public {
-        uint256 startingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
-
+    modifier auctionCreated {
         vm.startPrank(AUCTIONEER);
         usdt.approve(address(factory), AMOUNT_DEPOSIT);
-        address auction = address(factory.openAuction());
+        auction = factory.openAuction();
         vm.stopPrank();
+        _;
+    }
 
+    function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public auctionCreated {
         uint256 endingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
 
-        assertEq(usdt.balanceOf(auction), AUCTION_PRICE + AMOUNT_DEPOSIT);
-        assertEq(endingAuctioneerBalance, startingAuctioneerBalance - AMOUNT_DEPOSIT);
+        assertEq(usdt.balanceOf(address(auction)), AUCTION_PRICE + AMOUNT_DEPOSIT);
+        assertEq(endingAuctioneerBalance, startingBalance - AMOUNT_DEPOSIT);
+    }
+
+    function testAuctioneerCantJoinAuction() public auctionCreated {
+        vm.expectRevert(HundredDollarAuction.HundredDollarAuction__AuctioneerCannotJoinAsBidder.selector);
+        vm.prank(AUCTIONEER);
+        auction.joinAuction(MINIMUM_BID_AMOUNT);
     }
 }
