@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {DeployAuctionFactory} from "../../script/DeployAuctionFactory.s.sol";
 import {AuctionFactory} from "../../src/AuctionFactory.sol";
 import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
@@ -66,7 +66,34 @@ contract HundredDollarAuctionTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(HundredDollarAuction.HundredDollarAuction__BelowMinimumBidAmount.selector, amountToBid)
         );
-        vm.prank(AUCTIONEER);
+        vm.prank(ALICE);
         auction.joinAuction(amountToBid);
+    }
+
+    function testCollectBidFromFirstBidderAndUpdateInformations() public {
+        vm.startPrank(ALICE);
+        usdt.approve(address(auction), MINIMUM_BID_AMOUNT);
+        auction.joinAuction(MINIMUM_BID_AMOUNT);
+        vm.stopPrank();
+
+        uint8 expectedNumberOfBidders = 1;
+
+        /**
+         * enum Status {
+         *     OPEN         // 0
+         *     WAITING      // 1
+         *     ACTIVE       // 2
+         *     CAN_COLLECT  // 3
+         *     ENDED        // 4
+         *     CANCELLED    // 5
+         * }
+         */
+        uint8 expectedStatus = 1;
+
+        assertEq(auction.getFirstBidder(), ALICE);
+        assertEq(auction.getBidAmount(ALICE), MINIMUM_BID_AMOUNT);
+        assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
+        assertEq(uint8(auction.getStatus()), expectedStatus);
+        assertEq(auction.getCurrentBid(), MINIMUM_BID_AMOUNT);
     }
 }

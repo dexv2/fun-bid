@@ -404,4 +404,16 @@ contract HundredDollarAuction {
     function getIsIdle() public view returns (bool) {
         return _isIdle();
     }
+
+    function getFirstBidder() public view returns (address) {
+        return s_firstBidder;
+    }
+
+    function getBidAmount(address bidder) public view returns (uint256) {
+        return s_bidAmounts[bidder];
+    }
+
+    function getCurrentBid() public view returns (uint256) {
+        return s_currentBid;
+    }
 }
