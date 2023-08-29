@@ -91,6 +91,7 @@ contract HundredDollarAuctionTest is Test {
         uint8 expectedNumberOfBidders = 1;
 
         /**
+         * 
          * enum Status {
          *     OPEN         // 0
          *     WAITING      // 1
@@ -99,9 +100,12 @@ contract HundredDollarAuctionTest is Test {
          *     ENDED        // 4
          *     CANCELLED    // 5
          * }
+         * 
          */
         uint8 expectedStatus = 1;
 
+        uint256 expectedAuctionBalance = AUCTION_PRICE + AMOUNT_DEPOSIT + MINIMUM_BID_AMOUNT;
+        assertEq(usdt.balanceOf(address(auction)), expectedAuctionBalance);
         assertEq(auction.getFirstBidder(), ALICE);
         assertEq(auction.getBidAmount(ALICE), MINIMUM_BID_AMOUNT);
         assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
@@ -117,7 +121,39 @@ contract HundredDollarAuctionTest is Test {
         vm.startPrank(CINDY);
         usdt.approve(address(auction), SECOND_BID_AMOUNT);
 
-        vm.expectRevert(HundredDollarAuction.HundredDollarAuction__BiddersOccupied.selector);
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__BiddersOccupied.selector
+        );
+        auction.joinAuction(SECOND_BID_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function testCannotJoinWhenTheAmountWillNotOutbidTheFirstBidder() public firstBidderJoined {
+        // same amount as first bidder, means it will not outbid
+        uint256 amountToBid = MINIMUM_BID_AMOUNT;
+
+        vm.startPrank(BILLY);
+        usdt.approve(address(auction), amountToBid);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HundredDollarAuction.HundredDollarAuction__AmountDidNotOutbid.selector,
+                auction.getCurrentBid(),
+                amountToBid
+            )
+        );
+        auction.joinAuction(amountToBid);
+        vm.stopPrank();
+    }
+
+    function testFirstBidderCannotJoinAsSecondBidder() public firstBidderJoined {
+        // Alice is the first bidder
+        vm.startPrank(ALICE);
+        usdt.approve(address(auction), SECOND_BID_AMOUNT);
+
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__TheSameBidderNotAllowed.selector
+        );
         auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
     }
