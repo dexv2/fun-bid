@@ -16,15 +16,20 @@ contract HundredDollarAuctionTest is Test {
     USDT usdt;
     HundredDollarAuction auction;
 
+    // We will set ALICE as first bidder
     address public ALICE = makeAddr("alice");
+    // We will set BILLY as second bidder
     address public BILLY = makeAddr("billy");
     address public CINDY = makeAddr("cindy");
     address public AUCTIONEER = makeAddr("auctioneer");
     uint256 private constant AUCTION_PRICE = 100e18;
-    uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
+    uint256 private constant FIRST_BID_AMOUNT = 1e18;
     uint256 private constant SECOND_BID_AMOUNT = 5e18;
+    uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
     uint256 private startingAuctioneerBalance;
+    uint256 private startingFirstBidderBalance;
+    uint256 private startingSecondBidderBalance;
 
     function setUp() public {
         DeployAuctionFactory deployer = new DeployAuctionFactory();
@@ -41,6 +46,8 @@ contract HundredDollarAuctionTest is Test {
         faucet.requestUSDT();
 
         startingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
+        startingFirstBidderBalance = usdt.balanceOf(ALICE);
+        startingSecondBidderBalance = usdt.balanceOf(BILLY);
 
         // create auction
         vm.startPrank(AUCTIONEER);
@@ -51,8 +58,8 @@ contract HundredDollarAuctionTest is Test {
 
     modifier firstBidderJoined {
         vm.startPrank(ALICE);
-        usdt.approve(address(auction), MINIMUM_BID_AMOUNT);
-        auction.joinAuction(MINIMUM_BID_AMOUNT);
+        usdt.approve(address(auction), FIRST_BID_AMOUNT);
+        auction.joinAuction(FIRST_BID_AMOUNT);
         vm.stopPrank();
         _;
     }
@@ -75,7 +82,7 @@ contract HundredDollarAuctionTest is Test {
     function testAuctioneerCantJoinAuction() public {
         vm.expectRevert(HundredDollarAuction.HundredDollarAuction__AuctioneerCannotJoinAsBidder.selector);
         vm.prank(AUCTIONEER);
-        auction.joinAuction(MINIMUM_BID_AMOUNT);
+        auction.joinAuction(FIRST_BID_AMOUNT);
     }
 
     function testCannotJoinWithBelowMinimumBidAmount() public {
@@ -87,9 +94,28 @@ contract HundredDollarAuctionTest is Test {
         auction.joinAuction(amountToBid);
     }
 
-    function testCollectBidFromFirstBidderAndUpdateInformations() public firstBidderJoined {
+    function testShouldCollectBidFromFirstBidderWhenFirstBidderJoins() public firstBidderJoined {
+        uint256 endingFirstBidderBalance = usdt.balanceOf(ALICE);
+        uint256 expectedAuctionBalance = AUCTION_PRICE + AMOUNT_DEPOSIT + FIRST_BID_AMOUNT;
+        assertEq(usdt.balanceOf(address(auction)), expectedAuctionBalance);
+        assertEq(endingFirstBidderBalance, startingFirstBidderBalance - FIRST_BID_AMOUNT);
+    }
+
+    function testShouldUpdateFirstBidderAddressWhenFirstBidderJoins() public firstBidderJoined {
+        assertEq(auction.getFirstBidder(), ALICE);
+    }
+
+    function testShouldUpdateAmountBidOfFirstBidderWhenFirstBidderJoins() public firstBidderJoined {
+        assertEq(auction.getBidAmount(ALICE), FIRST_BID_AMOUNT);
+    }
+
+    function testNumberOfBiddersShouldBeOneAfterFirstBidderJoined() public firstBidderJoined {
         uint8 expectedNumberOfBidders = 1;
 
+        assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
+    }
+
+    function testShouldUpdateStatusToWaitingAfterFirstBidderJoined() public firstBidderJoined {
         /**
          * 
          * enum Status {
@@ -104,13 +130,11 @@ contract HundredDollarAuctionTest is Test {
          */
         uint8 expectedStatus = 1;
 
-        uint256 expectedAuctionBalance = AUCTION_PRICE + AMOUNT_DEPOSIT + MINIMUM_BID_AMOUNT;
-        assertEq(usdt.balanceOf(address(auction)), expectedAuctionBalance);
-        assertEq(auction.getFirstBidder(), ALICE);
-        assertEq(auction.getBidAmount(ALICE), MINIMUM_BID_AMOUNT);
-        assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
         assertEq(uint8(auction.getStatus()), expectedStatus);
-        assertEq(auction.getCurrentBid(), MINIMUM_BID_AMOUNT);
+    }
+
+    function testShouldUpdateCurrentBidWithFirstBiddersBidAfterFirstBidderJoined() public firstBidderJoined {
+        assertEq(auction.getCurrentBid(), FIRST_BID_AMOUNT);
     }
 
     function testCannotJoinWhenTheAuctionAlreadyHas2Bidders()
@@ -130,7 +154,7 @@ contract HundredDollarAuctionTest is Test {
 
     function testCannotJoinWhenTheAmountWillNotOutbidTheFirstBidder() public firstBidderJoined {
         // same amount as first bidder, means it will not outbid
-        uint256 amountToBid = MINIMUM_BID_AMOUNT;
+        uint256 amountToBid = FIRST_BID_AMOUNT;
 
         vm.startPrank(BILLY);
         usdt.approve(address(auction), amountToBid);
@@ -156,5 +180,110 @@ contract HundredDollarAuctionTest is Test {
         );
         auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
+    }
+
+    function testShouldCollectBidFromSecondBidderWhenSecondBidderJoins()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 endingSecondBidderBalance = usdt.balanceOf(BILLY);
+        uint256 expectedAuctionBalance = AUCTION_PRICE + AMOUNT_DEPOSIT + FIRST_BID_AMOUNT + SECOND_BID_AMOUNT;
+        assertEq(usdt.balanceOf(address(auction)), expectedAuctionBalance);
+        assertEq(endingSecondBidderBalance, startingSecondBidderBalance - SECOND_BID_AMOUNT);
+    }
+
+    function testShouldUpdateSecondBidderAddressWhenSecondBidderJoins()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        assertEq(auction.getSecondBidder(), BILLY);
+    }
+
+    function testShouldUpdateAmountBidOfSecondBidderWhenSecondBidderJoins()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        assertEq(auction.getBidAmount(BILLY), SECOND_BID_AMOUNT);
+    }
+
+    function testNumberOfBiddersShouldBeTwoAfterSecondBidderJoined()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint8 expectedNumberOfBidders = 2;
+        assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
+    }
+
+    function testShouldUpdateStatusToActiveAfterSecondBidderJoined()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        /**
+         * 
+         * enum Status {
+         *     OPEN         // 0
+         *     WAITING      // 1
+         *     ACTIVE       // 2
+         *     CAN_COLLECT  // 3
+         *     ENDED        // 4
+         *     CANCELLED    // 5
+         * }
+         * 
+         */
+        uint8 expectedStatus = 2;
+
+        assertEq(uint8(auction.getStatus()), expectedStatus);
+    }
+
+    function testShouldUpdateCurrentBidWithSecondBiddersBidAfterSecondBidderJoined()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        assertEq(auction.getCurrentBid(), SECOND_BID_AMOUNT);
+    }
+
+    function testShouldUpdateWinningBidderToSecondBidderWhenSecondBidderJoins()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        assertEq(auction.getWinningBidder(), BILLY);
+    }
+
+    function testShouldHaveNoWinningBidderYetIfNoSecondBidder()
+        public
+        firstBidderJoined
+    {
+        assertEq(auction.getWinningBidder(), address(0));
+    }
+
+    function testSetOpponentBiddersAsEachOtherAfterSecondBidderJoined()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        assertEq(auction.getOpponentBidder(ALICE), BILLY);
+        assertEq(auction.getOpponentBidder(BILLY), ALICE);
+    }
+
+    function testShouldHaveNoOpponentWhenNotABidder()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        assertEq(auction.getOpponentBidder(CINDY), address(0));
+    }
+
+    function testShouldHaveNoOpponentYetWhileWaitingForSecondBidder()
+        public
+        firstBidderJoined
+    {
+        assertEq(auction.getOpponentBidder(ALICE), address(0));
     }
 }

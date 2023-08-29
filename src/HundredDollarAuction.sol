@@ -305,7 +305,7 @@ contract HundredDollarAuction is ReentrancyGuard {
         }
 
         s_secondBidder = msg.sender;
-        s_bidAmounts[s_secondBidder] = MINIMUM_BID_AMOUNT;
+        s_bidAmounts[s_secondBidder] = amountToBid;
         s_status = Status.ACTIVE;
         s_numberOfBidders = NumberOfBidders.TWO;
 
@@ -416,6 +416,10 @@ contract HundredDollarAuction is ReentrancyGuard {
         return s_firstBidder;
     }
 
+    function getSecondBidder() public view returns (address) {
+        return s_secondBidder;
+    }
+
     function getBidAmount(address bidder) public view returns (uint256) {
         return s_bidAmounts[bidder];
     }
@@ -426,5 +430,13 @@ contract HundredDollarAuction is ReentrancyGuard {
 
     function getLatestTimestamp() public view returns (uint256) {
         return s_latestTimestamp;
+    }
+
+    function getOpponentBidder(address bidder) public view returns (address) {
+        return s_opponentBidder[bidder];
+    }
+
+    function getWinningBidder() public view returns (address) {
+        return s_winningBidder;
     }
 }
