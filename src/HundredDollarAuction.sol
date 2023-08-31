@@ -135,7 +135,7 @@ contract HundredDollarAuction is ReentrancyGuard {
     ////////////////////
 
     modifier onlyBidder {
-        if (msg.sender != s_firstBidder || msg.sender != s_secondBidder) {
+        if (msg.sender != s_firstBidder && msg.sender != s_secondBidder) {
             revert HundredDollarAuction__NotABidder();
         }
         _;
@@ -189,7 +189,7 @@ contract HundredDollarAuction is ReentrancyGuard {
     }
 
     /**
-     * @param bidIncrement how much the bidder will increase their bid
+     * @param bidIncrement how much you would want to increase your bid
      * @notice outbid your opponent to win the $100 price!!
      */
     function outbid(uint256 bidIncrement)

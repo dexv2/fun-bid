@@ -280,10 +280,41 @@ contract HundredDollarAuctionTest is Test {
         assertEq(auction.getOpponentBidder(CINDY), address(0));
     }
 
-    function testShouldHaveNoOpponentYetWhileWaitingForSecondBidder()
+    function testShouldHaveNoOpponentYetWhileWhenTheFirstBidderJoins()
         public
         firstBidderJoined
     {
         assertEq(auction.getOpponentBidder(ALICE), address(0));
+    }
+
+    function testRevertsIfBidderTriesToOutbidWithLessThanCurrentBid()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        // Current bid amounts per bidder:
+        // First bidder (ALICE): $1
+        // Second bidder (BILLY): $5
+
+        uint256 amountToIncrementBid = 3e18;
+        uint256 currentBid = auction.getCurrentBid();
+        uint256 aliceBidAmount = auction.getBidAmount(ALICE);
+        uint256 amountToOutbid = aliceBidAmount + amountToIncrementBid;
+
+        vm.startPrank(ALICE);
+        usdt.approve(address(auction), amountToIncrementBid);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HundredDollarAuction.HundredDollarAuction__AmountDidNotOutbid.selector,
+                currentBid,
+                amountToOutbid
+            )
+        );
+
+        // ALICE's bid after calling function outbid: $4
+        // $4 < $5 means it will not outbid BILLY and will revert
+        auction.outbid(amountToIncrementBid);
+        vm.stopPrank();
     }
 }
