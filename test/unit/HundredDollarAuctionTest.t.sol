@@ -317,4 +317,19 @@ contract HundredDollarAuctionTest is Test {
         auction.outbid(amountToIncrementBid);
         vm.stopPrank();
     }
+
+    function testCannotOutbidIfNotABidder()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 amountToIncrementBid = 3e18;
+        vm.startPrank(CINDY);
+        usdt.approve(address(auction), amountToIncrementBid);
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__NotABidder.selector
+        );
+        auction.outbid(amountToIncrementBid);
+        vm.stopPrank();
+    }
 }
