@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.18;
 
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {USDT} from "./USDT.sol";
 
 /**
@@ -29,7 +28,7 @@ import {USDT} from "./USDT.sol";
  * 4. When either of the bid reaches $100, the auctioneer can end the
  *    auction anytime.
  */
-contract HundredDollarAuction is ReentrancyGuard {
+contract HundredDollarAuction {
     /////////////////
     // Errors      //
     /////////////////
@@ -185,7 +184,6 @@ contract HundredDollarAuction is ReentrancyGuard {
      */
     function joinAuction(uint256 amountToBid)
         public
-        nonReentrant
         atState(State.OPEN)
         bidAmountChecked(amountToBid)
     {
@@ -209,7 +207,6 @@ contract HundredDollarAuction is ReentrancyGuard {
      */
     function outbid(uint256 bidIncrement)
         public
-        nonReentrant
         onlyBidder
         atState(State.ACTIVE)
         bidAmountChecked(bidIncrement)
@@ -233,7 +230,6 @@ contract HundredDollarAuction is ReentrancyGuard {
      */
     function forfeit()
         public
-        nonReentrant
         onlyBidder
         atState(State.ACTIVE)
     {
@@ -244,7 +240,7 @@ contract HundredDollarAuction is ReentrancyGuard {
      * When the auction becomes idle, the auctioneer can choose
      * to cancel the auction at any states, except ENDED
      */
-    function cancelAuction() public nonReentrant onlyAuctioneer {
+    function cancelAuction() public onlyAuctioneer {
         if (!_isIdle()) {
             revert HundredDollarAuction__AuctionNotYetIdle();
         }
@@ -287,7 +283,6 @@ contract HundredDollarAuction is ReentrancyGuard {
 
     function endAuction()
         public
-        nonReentrant
         onlyAuctioneer
         atState(State.ACTIVE)
     {
