@@ -115,10 +115,10 @@ contract HundredDollarAuctionTest is Test {
         assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
     }
 
-    function testShouldUpdateStatusToWaitingAfterFirstBidderJoined() public firstBidderJoined {
+    function testShouldUpdateStateToWaitingAfterFirstBidderJoined() public firstBidderJoined {
         /**
          * 
-         * enum Status {
+         * enum State {
          *     OPEN         // 0
          *     WAITING      // 1
          *     ACTIVE       // 2
@@ -128,9 +128,9 @@ contract HundredDollarAuctionTest is Test {
          * }
          * 
          */
-        uint8 expectedStatus = 1;
+        uint8 expectedState = 1;
 
-        assertEq(uint8(auction.getStatus()), expectedStatus);
+        assertEq(uint8(auction.getState()), expectedState);
     }
 
     function testShouldUpdateCurrentBidWithFirstBiddersBidAfterFirstBidderJoined() public firstBidderJoined {
@@ -218,14 +218,14 @@ contract HundredDollarAuctionTest is Test {
         assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
     }
 
-    function testShouldUpdateStatusToActiveAfterSecondBidderJoined()
+    function testShouldUpdateStateToActiveAfterSecondBidderJoined()
         public
         firstBidderJoined
         secondBidderJoined
     {
         /**
          * 
-         * enum Status {
+         * enum State {
          *     OPEN         // 0
          *     WAITING      // 1
          *     ACTIVE       // 2
@@ -235,9 +235,9 @@ contract HundredDollarAuctionTest is Test {
          * }
          * 
          */
-        uint8 expectedStatus = 2;
+        uint8 expectedState = 2;
 
-        assertEq(uint8(auction.getStatus()), expectedStatus);
+        assertEq(uint8(auction.getState()), expectedState);
     }
 
     function testShouldUpdateCurrentBidWithSecondBiddersBidAfterSecondBidderJoined()

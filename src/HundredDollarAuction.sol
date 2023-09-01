@@ -34,24 +34,27 @@ contract HundredDollarAuction is ReentrancyGuard {
     // Errors      //
     /////////////////
     error HundredDollarAuction__TransferFailed();
-    error HundredDollarAuction__BidCollectionFailed();
     error HundredDollarAuction__BiddersOccupied();
-    error HundredDollarAuction__AuctioneerOccupied();
     error HundredDollarAuction__AmountDidNotOutbid(uint256 currentBid, uint256 amountToBid);
     error HundredDollarAuction__BelowMinimumBidAmount(uint256 amountToBid);
     error HundredDollarAuction__NotABidder();
     error HundredDollarAuction__NotAnAuctioneer();
-    error HundredDollarAuction__LessThanTwoBidders();
     error HundredDollarAuction__TheSameBidderNotAllowed();
-    error HundredDollarAuction__BidderCantOverseeAuction();
     error HundredDollarAuction__AuctioneerCannotJoinAsBidder();
     error HundredDollarAuction__AuctionNotYetIdle();
     error HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
+    error HundredDollarAuction__FunctionCalledAtIncorrectState(State currentState, State functionState);
+    error HundredDollarAuction__AuctionAlreadyEnded();
 
     /////////////////
     // Events      //
     /////////////////
-    event BidAdded(address indexed auction, address indexed bidder, address indexed opponentBidder, uint256 amountBid);
+    event BidAdded(
+        address indexed auction,
+        address indexed bidder,
+        address indexed opponentBidder,
+        uint256 amountBid
+    );
     event AuctionEnded(
         address indexed auction,
         address indexed winningBidder,
@@ -61,12 +64,16 @@ contract HundredDollarAuction is ReentrancyGuard {
         uint256 losingBid,
         uint256 totalBids
     );
-    event AuctionCancelled(address indexed auction, address indexed auctioneer, uint256 amountCollected);
+    event AuctionCancelled(
+        address indexed auction,
+        address indexed auctioneer,
+        uint256 amountCollected
+    );
 
     ////////////////
     // Enums      //
     ////////////////
-    enum Status { OPEN, WAITING, ACTIVE, CAN_COLLECT, ENDED, CANCELLED }
+    enum State { OPEN, ACTIVE, ENDED }
     enum NumberOfBidders { ZERO, ONE, TWO }
 
     //////////////////////////
@@ -90,10 +97,9 @@ contract HundredDollarAuction is ReentrancyGuard {
     address private s_secondBidder;
     address private s_winningBidder;
     uint256 private s_currentBid;
-    // block.timestamp safe with 15-second rule
-    uint256 private s_latestTimestamp = block.timestamp;
-    NumberOfBidders private s_numberOfBidders = NumberOfBidders.ZERO;
-    Status private s_status = Status.OPEN;
+    uint256 private s_latestTimestamp;
+    NumberOfBidders private s_numberOfBidders;
+    State private s_state;
     address private immutable i_factory;
     USDT private immutable i_usdt;
 
@@ -128,6 +134,10 @@ contract HundredDollarAuction is ReentrancyGuard {
         i_factory = msg.sender;
         i_usdt = usdt;
         s_auctioneer = auctioneer;
+        // block.timestamp safe with 15-second rule
+        s_latestTimestamp = block.timestamp;
+        s_numberOfBidders = NumberOfBidders.ZERO;
+        s_state = State.OPEN;
     }
 
     ////////////////////
@@ -137,13 +147,6 @@ contract HundredDollarAuction is ReentrancyGuard {
     modifier onlyBidder {
         if (msg.sender != s_firstBidder && msg.sender != s_secondBidder) {
             revert HundredDollarAuction__NotABidder();
-        }
-        _;
-    }
-
-    modifier onlyWithTwoBidders {
-        if (s_numberOfBidders != NumberOfBidders.TWO) {
-            revert HundredDollarAuction__LessThanTwoBidders();
         }
         _;
     }
@@ -163,6 +166,13 @@ contract HundredDollarAuction is ReentrancyGuard {
         _;
     }
 
+    modifier atState(State state) {
+        if (s_state != state) {
+            revert HundredDollarAuction__FunctionCalledAtIncorrectState(s_state, state);
+        }
+        _;
+    }
+
     ///////////////////////////
     // Public Functions      //
     ///////////////////////////
@@ -173,7 +183,12 @@ contract HundredDollarAuction is ReentrancyGuard {
      * @notice only two bidders can join the auction for this to become active
      * meaning this function can only be called successfully twice in its entirety
      */
-    function joinAuction(uint256 amountToBid) public nonReentrant bidAmountChecked(amountToBid) {
+    function joinAuction(uint256 amountToBid)
+        public
+        nonReentrant
+        atState(State.OPEN)
+        bidAmountChecked(amountToBid)
+    {
         if (msg.sender == s_auctioneer) {
             revert HundredDollarAuction__AuctioneerCannotJoinAsBidder();
         }
@@ -196,7 +211,7 @@ contract HundredDollarAuction is ReentrancyGuard {
         public
         nonReentrant
         onlyBidder
-        onlyWithTwoBidders
+        atState(State.ACTIVE)
         bidAmountChecked(bidIncrement)
     {
         uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
@@ -216,34 +231,44 @@ contract HundredDollarAuction is ReentrancyGuard {
     /**
      * @notice calling this function will make opponent the winner by default.
      */
-    function forfeit() public nonReentrant onlyBidder onlyWithTwoBidders {
+    function forfeit()
+        public
+        nonReentrant
+        onlyBidder
+        atState(State.ACTIVE)
+    {
         _endAuction(s_opponentBidder[msg.sender]);
     }
 
     /**
-     * When the auction becomes idle, the auctioneer can choose to cancel the auction anytime.
+     * When the auction becomes idle, the auctioneer can choose
+     * to cancel the auction at any states, except ENDED
      */
     function cancelAuction() public nonReentrant onlyAuctioneer {
         if (!_isIdle()) {
             revert HundredDollarAuction__AuctionNotYetIdle();
         }
+        if (s_state == State.ENDED) {
+            revert HundredDollarAuction__AuctionAlreadyEnded();
+        }
 
         NumberOfBidders numberOfBidders = s_numberOfBidders;
-        address firstBidder = s_firstBidder;
         if (numberOfBidders == NumberOfBidders.ZERO) {
             // when the auction doesn't get any bidder
             _returnDepositAndFunds();
         }
         else if (numberOfBidders == NumberOfBidders.ONE) {
+            address firstBidder = s_firstBidder;
             // when the auction doesn't get a second bidder
             _returnDepositAndFunds();
 
             // refund first bidder
-            _transferUsdt(firstBidder, s_bidAmounts[s_firstBidder]);
+            _transferUsdt(firstBidder, s_bidAmounts[firstBidder]);
         }
         else {
+            address winningBidder = s_winningBidder;
             // punish the bidder who becomes idle, idle bidder's bid will be taken and divided by this contract:
-            uint256 amountTaken = s_bidAmounts[s_opponentBidder[s_winningBidder]];
+            uint256 amountTaken = s_bidAmounts[s_opponentBidder[winningBidder]];
             // 80% will be collected by auction factory
             uint256 amountToCollect = amountTaken * FACTORY_COLLECTION_THRESHOLD / PRECISION;
             // 10% to reward the auctioneer
@@ -254,18 +279,22 @@ contract HundredDollarAuction is ReentrancyGuard {
             _transferUsdt(i_factory, AUCTION_PRICE + amountToCollect);
 
             // refund auctioneer and winning bidder with rewards
-            _transferUsdt(s_winningBidder, s_bidAmounts[s_winningBidder] + amountToReward);
+            _transferUsdt(winningBidder, s_bidAmounts[winningBidder] + amountToReward);
             _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + amountToReward);
         }
-        s_status = Status.CANCELLED;
+        s_state = State.ENDED;
     }
 
-    function endAuction() public nonReentrant onlyAuctioneer {
+    function endAuction()
+        public
+        nonReentrant
+        onlyAuctioneer
+        atState(State.ACTIVE)
+    {
         // Auctioneer can end the auction when either of the bid gets $100 or more.
-        if (s_bidAmounts[s_winningBidder] < AUCTION_PRICE) {
+        if (s_currentBid < AUCTION_PRICE) {
             revert HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
         }
-
         _endAuction(s_winningBidder);
     }
 
@@ -281,7 +310,6 @@ contract HundredDollarAuction is ReentrancyGuard {
         s_firstBidder = msg.sender;
         s_bidAmounts[s_firstBidder] = amountToBid;
         s_numberOfBidders = NumberOfBidders.ONE;
-        s_status = Status.WAITING;
         _collectFromBidder(amountToBid);
         _updateCurrentBid(amountToBid);
     }
@@ -291,7 +319,7 @@ contract HundredDollarAuction is ReentrancyGuard {
      * @notice the bidder will occupy the s_secondBidder slot
      */
     function _joinAuctionAsSecondBidder(uint256 amountToBid) private {
-        // only to bidders should be able to enter this auction
+        // only two bidders should be able to enter this auction
         if (s_secondBidder != address(0)) {
             revert HundredDollarAuction__BiddersOccupied();
         }
@@ -306,7 +334,7 @@ contract HundredDollarAuction is ReentrancyGuard {
 
         s_secondBidder = msg.sender;
         s_bidAmounts[s_secondBidder] = amountToBid;
-        s_status = Status.ACTIVE;
+        s_state = State.ACTIVE;
         s_numberOfBidders = NumberOfBidders.TWO;
 
         s_opponentBidder[s_firstBidder] = s_secondBidder;
@@ -352,24 +380,16 @@ contract HundredDollarAuction is ReentrancyGuard {
         _transferUsdt(winner, AUCTION_PRICE);
         _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
 
-        s_status = Status.ENDED;
+        s_state = State.ENDED;
     }
 
     function _updateCurrentBid(uint256 amountToBid) private {
         s_currentBid = amountToBid;
     }
 
-    function _updateWinningBidder() private {
-        s_winningBidder = msg.sender;
-
-        if (s_currentBid >= AUCTION_PRICE) {
-            s_status = Status.CAN_COLLECT;
-        }
-    }
-
     function _updateCurrentBidAndWinningBidder(uint256 amountToBid) private {
         _updateCurrentBid(amountToBid);
-        _updateWinningBidder();
+        s_winningBidder = msg.sender;
     }
 
     function _updateTimestamp() private {
@@ -396,8 +416,8 @@ contract HundredDollarAuction is ReentrancyGuard {
     // Public View Functions      //
     ////////////////////////////////
 
-    function getStatus() public view returns (Status) {
-        return s_status;
+    function getState() public view returns (State) {
+        return s_state;
     }
 
     function getNumberOfBidders() public view returns (NumberOfBidders) {
