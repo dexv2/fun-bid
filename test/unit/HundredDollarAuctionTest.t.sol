@@ -115,41 +115,8 @@ contract HundredDollarAuctionTest is Test {
         assertEq(uint8(auction.getNumberOfBidders()), expectedNumberOfBidders);
     }
 
-    function testShouldUpdateStateToWaitingAfterFirstBidderJoined() public firstBidderJoined {
-        /**
-         * 
-         * enum State {
-         *     OPEN         // 0
-         *     WAITING      // 1
-         *     ACTIVE       // 2
-         *     CAN_COLLECT  // 3
-         *     ENDED        // 4
-         *     CANCELLED    // 5
-         * }
-         * 
-         */
-        uint8 expectedState = 1;
-
-        assertEq(uint8(auction.getState()), expectedState);
-    }
-
     function testShouldUpdateCurrentBidWithFirstBiddersBidAfterFirstBidderJoined() public firstBidderJoined {
         assertEq(auction.getCurrentBid(), FIRST_BID_AMOUNT);
-    }
-
-    function testCannotJoinWhenTheAuctionAlreadyHas2Bidders()
-        public
-        firstBidderJoined
-        secondBidderJoined
-    {
-        vm.startPrank(CINDY);
-        usdt.approve(address(auction), SECOND_BID_AMOUNT);
-
-        vm.expectRevert(
-            HundredDollarAuction.HundredDollarAuction__BiddersOccupied.selector
-        );
-        auction.joinAuction(SECOND_BID_AMOUNT);
-        vm.stopPrank();
     }
 
     function testCannotJoinWhenTheAmountWillNotOutbidTheFirstBidder() public firstBidderJoined {
@@ -227,15 +194,12 @@ contract HundredDollarAuctionTest is Test {
          * 
          * enum State {
          *     OPEN         // 0
-         *     WAITING      // 1
-         *     ACTIVE       // 2
-         *     CAN_COLLECT  // 3
-         *     ENDED        // 4
-         *     CANCELLED    // 5
+         *     ACTIVE       // 1
+         *     ENDED        // 2
          * }
          * 
          */
-        uint8 expectedState = 2;
+        uint8 expectedState = 1;
 
         assertEq(uint8(auction.getState()), expectedState);
     }
@@ -334,18 +298,66 @@ contract HundredDollarAuctionTest is Test {
         vm.stopPrank();
     }
 
-    function testCannotOutbidWithoutOpponent()
+    function testCannotCallOutbidWhenStateIsNotActive()
         public
         firstBidderJoined
     {
+        /**
+         * 
+         * Current State is OPEN since Second Bidder has not yet joined
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+        uint256 validStateForOutbidFunction = 1; // ACTIVE
         uint256 amountToIncrementBid = 3e18;
 
         vm.startPrank(ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
         vm.expectRevert(
-            HundredDollarAuction.HundredDollarAuction__LessThanTwoBidders.selector
+            abi.encodeWithSelector(
+                HundredDollarAuction.HundredDollarAuction__FunctionCalledAtIncorrectState.selector,
+                auction.getState(), // Current State is OPEN since Second Bidder has not yet joined
+                validStateForOutbidFunction // State should be ACTIVE to call outbid function
+            )
         );
         auction.outbid(amountToIncrementBid);
+        vm.stopPrank();
+    }
+
+    function testCannotCallJoinBidWhenTheStateIsActive()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        /**
+         * 
+         * Current State is OPEN since Second Bidder has not yet joined
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+        uint256 validStateForOutbidFunction = 0; // OPEN
+
+        vm.startPrank(CINDY);
+        usdt.approve(address(auction), SECOND_BID_AMOUNT);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HundredDollarAuction.HundredDollarAuction__FunctionCalledAtIncorrectState.selector,
+                auction.getState(), // Current State is ACTIVE since Second Bidder has already joined
+                validStateForOutbidFunction // Cannot call joinAction when State is not OPEN anymore
+            )
+        );
+        auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
     }
 }
