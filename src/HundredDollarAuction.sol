@@ -199,6 +199,8 @@ contract HundredDollarAuction {
         }
 
         _updateTimestamp();
+
+        emit BidAdded(address(this), msg.sender, s_opponentBidder[msg.sender], amountToBid);
     }
 
     /**
@@ -223,6 +225,8 @@ contract HundredDollarAuction {
         _updateCurrentBidAndWinningBidder(amountToBid);
 
         _updateTimestamp();
+
+        emit BidAdded(address(this), msg.sender, s_opponentBidder[msg.sender], amountToBid);
     }
 
     /**
@@ -248,7 +252,10 @@ contract HundredDollarAuction {
             revert HundredDollarAuction__AuctionAlreadyEnded();
         }
 
+        address auctioneer = s_auctioneer;
+        uint256 amountRetrieved = AUCTION_PRICE;
         NumberOfBidders numberOfBidders = s_numberOfBidders;
+
         if (numberOfBidders == NumberOfBidders.ZERO) {
             // when the auction doesn't get any bidder
             _returnDepositAndFunds();
@@ -270,15 +277,18 @@ contract HundredDollarAuction {
             // 10% to reward the auctioneer
             // 10% to reward the other bidder
             uint256 amountToReward = amountTaken * REWARD_THRESHOLD / PRECISION;
+            amountRetrieved = AUCTION_PRICE + amountToCollect;
 
             // retrieve auction price with amount taken
-            _transferUsdt(i_factory, AUCTION_PRICE + amountToCollect);
+            _transferUsdt(i_factory, amountRetrieved);
 
             // refund auctioneer and winning bidder with rewards
             _transferUsdt(winningBidder, s_bidAmounts[winningBidder] + amountToReward);
-            _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + amountToReward);
+            _transferUsdt(auctioneer, AMOUNT_DEPOSIT + amountToReward);
         }
         s_state = State.ENDED;
+
+        emit AuctionCancelled(address(this), auctioneer, amountRetrieved);
     }
 
     function endAuction()
@@ -362,6 +372,8 @@ contract HundredDollarAuction {
 
     function _endAuction(address winner) private {
         uint256 totalBids = _totalBids();
+        address winningBidder = s_winningBidder;
+        address auctioneer = s_auctioneer;
         // reward the auctioneer based on the auction profit
         int256 auctionProfit = int256(totalBids - AUCTION_PRICE);
         uint256 auctioneerReward;
@@ -371,11 +383,13 @@ contract HundredDollarAuction {
         // amount to return to factory
         uint256 retrieveAmount = totalBids - auctioneerReward;
 
+        s_state = State.ENDED;
+
         _transferUsdt(i_factory, retrieveAmount);
         _transferUsdt(winner, AUCTION_PRICE);
-        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
+        _transferUsdt(auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
 
-        s_state = State.ENDED;
+        emit AuctionEnded(address(this), winningBidder, auctioneer, s_opponentBidder[winningBidder], s_currentBid, s_bidAmounts[s_opponentBidder[winningBidder]], totalBids);
     }
 
     function _updateCurrentBid(uint256 amountToBid) private {
