@@ -52,7 +52,7 @@ contract HundredDollarAuctionTest is Test {
         // create auction
         vm.startPrank(AUCTIONEER);
         usdt.approve(address(factory), AMOUNT_DEPOSIT);
-        auction = factory.openAuction();
+        auction = HundredDollarAuction(factory.openAuction());
         vm.stopPrank();
     }
 

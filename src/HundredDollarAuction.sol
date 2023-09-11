@@ -242,7 +242,7 @@ contract HundredDollarAuction {
 
     /**
      * When the auction becomes idle, the auctioneer can choose
-     * to cancel the auction at any states, except ENDED
+     * to cancel the auction at any states, except State.ENDED
      */
     function cancelAuction() public onlyAuctioneer {
         if (!_isIdle()) {
@@ -309,7 +309,8 @@ contract HundredDollarAuction {
 
     /**
      * @param amountToBid the amount set by first bidder which should be more than or equal to MINIMUM_BID_AMOUNT ($1).
-     * @notice the bidder will occupy the s_firstBidder slot
+     * 
+     * The bidder will occupy the s_firstBidder slot
      */
     function _joinAuctionAsFirstBidder(uint256 amountToBid) private {
         s_firstBidder = msg.sender;
@@ -321,7 +322,8 @@ contract HundredDollarAuction {
 
     /**
      * @param amountToBid the amount set by second bidder which should be more than the bid of first bidder.
-     * @notice the bidder will occupy the s_secondBidder slot
+     * 
+     * The bidder will occupy the s_secondBidder slot
      */
     function _joinAuctionAsSecondBidder(uint256 amountToBid) private {
         // only two bidders should be able to enter this auction

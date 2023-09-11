@@ -39,8 +39,8 @@ contract AuctionFactory is Ownable {
      * The user who calls this function will become an auctioneer who will oversee this auction.
      * Upon starting the auction, the user deposits 10 USDT which will be returned after the auction has ended.
      */
-    function openAuction() public returns (HundredDollarAuction auction) {
-        auction = new HundredDollarAuction(i_usdt, msg.sender);
+    function openAuction() public returns (address) {
+        HundredDollarAuction auction = new HundredDollarAuction(i_usdt, msg.sender);
         auctionList.push(address(auction));
 
         bool success = i_usdt.transferFrom(msg.sender, address(auction), AMOUNT_DEPOSIT);
@@ -57,6 +57,8 @@ contract AuctionFactory is Ownable {
         }
 
         emit HundredDollarAuctionCreated(address(auction));
+
+        return address(auction);
     }
 
     function fundFaucet(uint256 amountToFund) public onlyOwner {
