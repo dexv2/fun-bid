@@ -1,4 +1,4 @@
-# A game you cannot win
+# A game you cannot win!!
 
 ### I'll sell you $100 for only $1
 
@@ -15,7 +15,7 @@ But there is a catch:
 
 So you definitely don't wanna lose or else you're just throwing your money away for nothing.
 
-This game is designed to keep the bidders to keep bidding until the profit incentive is gone, leaving me making a profit out of bids.
+This game is designed to make bidders keep bidding until the profit incentive is gone, leaving me with a profit out of bids.
 
 Inspired by this [video](https://www.facebook.com/VsauceTwo/videos/862570687923464/?vh=e&mibextid=UVffzb) on Facebook, I've made a smart contract out of it.
 
@@ -43,7 +43,7 @@ forge build
 ## Deploy:
 
 ```
-forge script script/DeployAuctionFactory.s.s.sol
+forge script script/DeployAuctionFactory.s.sol
 ```
 
 ## Testing
