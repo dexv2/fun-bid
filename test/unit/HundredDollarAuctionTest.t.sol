@@ -329,7 +329,7 @@ contract HundredDollarAuctionTest is Test {
         vm.stopPrank();
     }
 
-    function testCannotCallJoinBidWhenTheStateIsActive()
+    function testCannotCallJoinBidWhenTheStateIsAlreadyActive()
         public
         firstBidderJoined
         secondBidderJoined
@@ -359,5 +359,29 @@ contract HundredDollarAuctionTest is Test {
         );
         auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
+    }
+
+    function updatesInformationAfterOutbidding()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 amountToIncrementBid = 3e18;
+        uint256 startingAliceBid = auction.getBidAmount(ALICE);
+        uint256 startingAuctionBalance = usdt.balanceOf(address(auction));
+
+        vm.startPrank(ALICE);
+        usdt.approve(address(auction), amountToIncrementBid);
+        auction.outbid(amountToIncrementBid);
+        vm.stopPrank();
+
+        uint256 currentBid = auction.getCurrentBid();
+        uint256 endingAliceBid = auction.getBidAmount(ALICE);
+        uint256 endingAuctionBalance = usdt.balanceOf(address(auction));
+
+        assertEq(currentBid, endingAliceBid);
+        assertEq(endingAliceBid, startingAliceBid + amountToIncrementBid);
+        assertEq(endingAuctionBalance, startingAuctionBalance + amountToIncrementBid);
+        assertEq(auction.getWinningBidder(), ALICE);
     }
 }
