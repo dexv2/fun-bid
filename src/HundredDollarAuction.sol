@@ -221,7 +221,7 @@ contract HundredDollarAuction {
         }
 
         s_bidAmounts[msg.sender] = amountToBid;
-        _collectFromBidder(amountToBid);
+        _collectFromBidder(bidIncrement);
         _updateCurrentBidAndWinningBidder(amountToBid);
 
         _updateTimestamp();

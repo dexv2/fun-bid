@@ -361,12 +361,12 @@ contract HundredDollarAuctionTest is Test {
         vm.stopPrank();
     }
 
-    function updatesBidAmountsAfterOutbidding()
+    function testUpdatesBidAmountsAfterOutbidding()
         public
         firstBidderJoined
         secondBidderJoined
     {
-        uint256 amountToIncrementBid = 3e18;
+        uint256 amountToIncrementBid = 10e18;
         uint256 startingAliceBid = auction.getBidAmount(ALICE);
 
         vm.startPrank(ALICE);
@@ -381,12 +381,12 @@ contract HundredDollarAuctionTest is Test {
         assertEq(endingAliceBid, startingAliceBid + amountToIncrementBid);
     }
 
-    function updatesWinningBidderAfterOutbidding()
+    function testUpdatesWinningBidderAfterOutbidding()
         public
         firstBidderJoined
         secondBidderJoined
     {
-        uint256 amountToIncrementBid = 3e18;
+        uint256 amountToIncrementBid = 10e18;
 
         vm.startPrank(ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
@@ -394,5 +394,23 @@ contract HundredDollarAuctionTest is Test {
         vm.stopPrank();
 
         assertEq(auction.getWinningBidder(), ALICE);
+    }
+
+    function testCollectUsdtFromBidderAfterOutbidding()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 amountToIncrementBid = 10e18;
+        uint256 startingAuctionBalance = usdt.balanceOf(address(auction));
+
+        vm.startPrank(ALICE);
+        usdt.approve(address(auction), amountToIncrementBid);
+        auction.outbid(amountToIncrementBid);
+        vm.stopPrank();
+
+        uint256 endingAuctionBalance = usdt.balanceOf(address(auction));
+
+        assertEq(endingAuctionBalance, startingAuctionBalance + amountToIncrementBid);
     }
 }
