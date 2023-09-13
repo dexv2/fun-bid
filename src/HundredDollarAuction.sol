@@ -259,12 +259,12 @@ contract HundredDollarAuction {
 
         if (numberOfBidders == NumberOfBidders.ZERO) {
             // when the auction doesn't get any bidder
-            _returnDepositAndFunds();
+            _returnDepositAndFunds(AUCTION_PRICE, AMOUNT_DEPOSIT);
         }
         else if (numberOfBidders == NumberOfBidders.ONE) {
             address firstBidder = s_firstBidder;
             // when the auction doesn't get a second bidder
-            _returnDepositAndFunds();
+            _returnDepositAndFunds(AUCTION_PRICE, AMOUNT_DEPOSIT);
 
             // refund first bidder
             s_amountWithdrawable[firstBidder] = s_bidAmounts[firstBidder];
@@ -280,14 +280,12 @@ contract HundredDollarAuction {
             uint256 amountToReward = amountTaken * REWARD_THRESHOLD / PRECISION;
             amountRetrieved = AUCTION_PRICE + amountToCollect;
 
-            // refund winning bidder and give rewards
+            // refund winning bidder and give incentive
             s_amountWithdrawable[winningBidder] = s_bidAmounts[winningBidder] + amountToReward;
 
-            // retrieve auction price with amount taken
-            _transferUsdt(i_factory, amountRetrieved);
-
-            // refund auctioneer with rewards
-            _transferUsdt(auctioneer, AMOUNT_DEPOSIT + amountToReward);
+            // retrieve auction price with amount taken,
+            // refund auctioneer and give rewards
+            _returnDepositAndFunds(amountRetrieved, AMOUNT_DEPOSIT + amountToReward);
         }
         s_state = State.ENDED;
 
@@ -354,11 +352,11 @@ contract HundredDollarAuction {
     }
 
     // when the auction gets cancelled,
-    function _returnDepositAndFunds() private {
+    function _returnDepositAndFunds(uint256 amountToFactory, uint256 amountToAuctioneer) private {
         // return the funds to auction factory
-        _transferUsdt(i_factory, AUCTION_PRICE);
+        _transferUsdt(i_factory, amountToFactory);
         // return the deposit of auctioneer
-        _transferUsdt(s_auctioneer, AMOUNT_DEPOSIT);
+        _transferUsdt(s_auctioneer, amountToAuctioneer);
     }
 
     function _transferUsdt(address to, uint256 amount) private {
@@ -391,8 +389,7 @@ contract HundredDollarAuction {
         s_state = State.ENDED;
         s_amountWithdrawable[winner] = AUCTION_PRICE;
 
-        _transferUsdt(i_factory, retrieveAmount);
-        _transferUsdt(auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
+        _returnDepositAndFunds(retrieveAmount, AMOUNT_DEPOSIT + auctioneerReward);
 
         emit AuctionEnded(address(this), winningBidder, auctioneer, s_opponentBidder[winningBidder], s_currentBid, s_bidAmounts[s_opponentBidder[winningBidder]], totalBids);
     }
