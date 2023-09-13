@@ -44,6 +44,7 @@ contract HundredDollarAuction {
     error HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice();
     error HundredDollarAuction__FunctionCalledAtIncorrectState(State currentState, State functionState);
     error HundredDollarAuction__AuctionAlreadyEnded();
+    error HundredDollarAuction__NoOutstandingAmountWithdrawable();
 
     /////////////////
     // Events      //
@@ -304,6 +305,17 @@ contract HundredDollarAuction {
         _endAuction(s_winningBidder);
     }
 
+    // follows CEI
+    function withdraw() public atState(State.ENDED) {
+        uint256 amountWithdrawable = s_amountWithdrawable[msg.sender];
+        if (amountWithdrawable <= 0) {
+            revert HundredDollarAuction__NoOutstandingAmountWithdrawable();
+        }
+
+        s_amountWithdrawable[msg.sender] = 0;
+        _transferUsdt(msg.sender, amountWithdrawable);
+    }
+
     ////////////////////////////
     // Private Functions      //
     ////////////////////////////
@@ -469,5 +481,9 @@ contract HundredDollarAuction {
 
     function getWinningBidder() public view returns (address) {
         return s_winningBidder;
+    }
+
+    function getAmountWithdrawable(address bidder) public view returns (uint256) {
+        return s_amountWithdrawable[bidder];
     }
 }
