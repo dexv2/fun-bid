@@ -90,6 +90,7 @@ contract HundredDollarAuction {
     // This mapping makes toggling between bidders easier and more gas efficient
     // instead of finding bidder and opponent bidder everytime.
     mapping(address bidder => address opponentBidder) private s_opponentBidder;
+    mapping(address bidder => uint256 amountWithdrawable) private s_amountWithdrawable;
 
     address private s_auctioneer;
     address private s_firstBidder;
@@ -266,7 +267,7 @@ contract HundredDollarAuction {
             _returnDepositAndFunds();
 
             // refund first bidder
-            _transferUsdt(firstBidder, s_bidAmounts[firstBidder]);
+            s_amountWithdrawable[firstBidder] = s_bidAmounts[firstBidder];
         }
         else {
             address winningBidder = s_winningBidder;
@@ -279,11 +280,13 @@ contract HundredDollarAuction {
             uint256 amountToReward = amountTaken * REWARD_THRESHOLD / PRECISION;
             amountRetrieved = AUCTION_PRICE + amountToCollect;
 
+            // refund winning bidder and give rewards
+            s_amountWithdrawable[winningBidder] = s_bidAmounts[winningBidder] + amountToReward;
+
             // retrieve auction price with amount taken
             _transferUsdt(i_factory, amountRetrieved);
 
-            // refund auctioneer and winning bidder with rewards
-            _transferUsdt(winningBidder, s_bidAmounts[winningBidder] + amountToReward);
+            // refund auctioneer with rewards
             _transferUsdt(auctioneer, AMOUNT_DEPOSIT + amountToReward);
         }
         s_state = State.ENDED;
@@ -386,9 +389,9 @@ contract HundredDollarAuction {
         uint256 retrieveAmount = totalBids - auctioneerReward;
 
         s_state = State.ENDED;
+        s_amountWithdrawable[winner] = AUCTION_PRICE;
 
         _transferUsdt(i_factory, retrieveAmount);
-        _transferUsdt(winner, AUCTION_PRICE);
         _transferUsdt(auctioneer, AMOUNT_DEPOSIT + auctioneerReward);
 
         emit AuctionEnded(address(this), winningBidder, auctioneer, s_opponentBidder[winningBidder], s_currentBid, s_bidAmounts[s_opponentBidder[winningBidder]], totalBids);
