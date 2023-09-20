@@ -336,7 +336,7 @@ contract HundredDollarAuctionTest is Test {
     {
         /**
          * 
-         * Current State is OPEN since Second Bidder has not yet joined
+         * Current State is ACTIVE since Second Bidder has already joined
          * 
          * enum State {
          *     OPEN         // 0
@@ -345,7 +345,7 @@ contract HundredDollarAuctionTest is Test {
          * }
          * 
          */
-        uint256 validStateForOutbidFunction = 0; // OPEN
+        uint256 validStateForJoinAuctionFunction = 0; // OPEN
 
         vm.startPrank(CINDY);
         usdt.approve(address(auction), SECOND_BID_AMOUNT);
@@ -354,7 +354,7 @@ contract HundredDollarAuctionTest is Test {
             abi.encodeWithSelector(
                 HundredDollarAuction.HundredDollarAuction__FunctionCalledAtIncorrectState.selector,
                 auction.getState(), // Current State is ACTIVE since Second Bidder has already joined
-                validStateForOutbidFunction // Cannot call joinAction when State is not OPEN anymore
+                validStateForJoinAuctionFunction // Cannot call joinAction when State is not OPEN anymore
             )
         );
         auction.joinAuction(SECOND_BID_AMOUNT);
@@ -412,5 +412,33 @@ contract HundredDollarAuctionTest is Test {
         uint256 endingAuctionBalance = usdt.balanceOf(address(auction));
 
         assertEq(endingAuctionBalance, startingAuctionBalance + amountToIncrementBid);
+    }
+
+    function testRevertsIfTheBidderForfeitsWhileTheStateIsNotActive()
+        public
+        firstBidderJoined
+    {
+        /**
+         * 
+         * Current State is OPEN since Second Bidder has not yet joined
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+        uint256 validStateForForfeitFunction = 1; // ACTIVE
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HundredDollarAuction.HundredDollarAuction__FunctionCalledAtIncorrectState.selector,
+                auction.getState(), // Current State is OPEN since Second Bidder has not yet joined
+                validStateForForfeitFunction // State should be ACTIVE to call forfeit function
+            )
+        );
+        vm.prank(ALICE);
+        auction.forfeit();
     }
 }
