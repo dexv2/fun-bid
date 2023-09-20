@@ -57,20 +57,41 @@ contract HundredDollarAuctionTest is Test {
     }
 
     modifier firstBidderJoined {
-        vm.startPrank(ALICE);
-        usdt.approve(address(auction), FIRST_BID_AMOUNT);
-        auction.joinAuction(FIRST_BID_AMOUNT);
-        vm.stopPrank();
+        _joinAsFirstBidder();
         _;
     }
 
     modifier secondBidderJoined {
+        _joinAsSecondBidder();
+        _;
+    }
+
+    function _joinAsFirstBidder() private {
+        vm.startPrank(ALICE);
+        usdt.approve(address(auction), FIRST_BID_AMOUNT);
+        auction.joinAuction(FIRST_BID_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function _joinAsSecondBidder() private {
         vm.startPrank(BILLY);
         usdt.approve(address(auction), SECOND_BID_AMOUNT);
         auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
-        _;
     }
+
+    // function testUpdatesTimestampWhenJoiningTheBid() public {
+    //     uint256 timestamp1 = auction.getLatestTimestamp();
+    //     _joinAsFirstBidder();
+    //     uint256 timestamp2 = auction.getLatestTimestamp();
+    //     _joinAsSecondBidder();
+    //     uint256 timestamp3 = auction.getLatestTimestamp();
+
+    //     console.log(timestamp1, timestamp2, timestamp3, block.timestamp);
+
+    //     assert(timestamp2 > timestamp1);
+    //     assert(timestamp3 > timestamp2);
+    // }
 
     function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public {
         uint256 endingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);

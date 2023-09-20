@@ -45,6 +45,7 @@ contract HundredDollarAuction {
     error HundredDollarAuction__FunctionCalledAtIncorrectState(State currentState, State functionState);
     error HundredDollarAuction__AuctionAlreadyEnded();
     error HundredDollarAuction__NoOutstandingAmountWithdrawable();
+    error HundredDollarAuction__NotEOA();
 
     /////////////////
     // Events      //
@@ -189,6 +190,10 @@ contract HundredDollarAuction {
         atState(State.OPEN)
         bidAmountChecked(amountToBid)
     {
+        if (msg.sender != tx.origin) {
+            revert HundredDollarAuction__NotEOA();
+        }
+
         if (msg.sender == s_auctioneer) {
             revert HundredDollarAuction__AuctioneerCannotJoinAsBidder();
         }
@@ -246,7 +251,10 @@ contract HundredDollarAuction {
      * When the auction becomes idle, the auctioneer can choose
      * to cancel the auction at any states, except State.ENDED
      */
-    function cancelAuction() public onlyAuctioneer {
+    function cancelAuction()
+        public
+        onlyAuctioneer
+    {
         if (!_isIdle()) {
             revert HundredDollarAuction__AuctionNotYetIdle();
         }

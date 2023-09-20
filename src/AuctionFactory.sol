@@ -20,6 +20,7 @@ import {USDTFaucet} from "./USDTFaucet.sol";
 contract AuctionFactory is Ownable {
     error AuctionFactory__TransferFailed();
     error AuctionFactory__MintFailed();
+    error AuctionFactory__NotEOA();
 
     uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
@@ -40,6 +41,10 @@ contract AuctionFactory is Ownable {
      * Upon starting the auction, the user deposits 10 USDT which will be returned after the auction has ended.
      */
     function openAuction() public returns (address) {
+        if (msg.sender != tx.origin) {
+            revert AuctionFactory__NotEOA();
+        }
+
         HundredDollarAuction auction = new HundredDollarAuction(i_usdt, msg.sender);
         auctionList.push(address(auction));
 
