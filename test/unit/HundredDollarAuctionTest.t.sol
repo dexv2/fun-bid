@@ -298,7 +298,7 @@ contract HundredDollarAuctionTest is Test {
         vm.stopPrank();
     }
 
-    function testCannotCallOutbidWhenStateIsNotActive()
+    function testCannotOutbidWhenStateIsNotActive()
         public
         firstBidderJoined
     {
@@ -414,7 +414,7 @@ contract HundredDollarAuctionTest is Test {
         assertEq(endingAuctionBalance, startingAuctionBalance + amountToIncrementBid);
     }
 
-    function testRevertsIfTheBidderForfeitsWhileTheStateIsNotActive()
+    function testCannotForfeitWhenTheStateIsNotActive()
         public
         firstBidderJoined
     {
@@ -439,6 +439,18 @@ contract HundredDollarAuctionTest is Test {
             )
         );
         vm.prank(ALICE);
+        auction.forfeit();
+    }
+
+    function testCannotForfeitIfNotABidder()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__NotABidder.selector
+        );
+        vm.prank(CINDY);
         auction.forfeit();
     }
 }
