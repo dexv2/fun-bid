@@ -53,8 +53,6 @@ contract HundredDollarAuctionTest is Test {
         // // create auction
         vm.startPrank(AUCTIONEER, AUCTIONEER);
         usdt.approve(address(factory), AMOUNT_DEPOSIT);
-        console.log("auctioneer:", AUCTIONEER);
-        console.log("address(this):", address(this));
         auction = HundredDollarAuction(factory.openAuction());
         vm.stopPrank();
     }
