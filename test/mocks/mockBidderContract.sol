@@ -11,10 +11,10 @@ interface USDT {
     function transferFrom(address from, address to, uint256 amount) external;
 }
 
-contract Bidder {
-    function joinAuction(HundredDollarAuction auction, USDT usdt, uint256 amountToBid) external {
-        usdt.transferFrom(msg.sender, address(this), amountToBid);
-        usdt.approve(address(auction), amountToBid);
-        auction.joinAuction(amountToBid);
+contract MockBidderContract {
+    function joinAuction(address auction, address usdt, uint256 amountToBid) external {
+        USDT(usdt).transferFrom(msg.sender, address(this), amountToBid);
+        USDT(usdt).approve(address(auction), amountToBid);
+        HundredDollarAuction(auction).joinAuction(amountToBid);
     }
 }

@@ -8,6 +8,7 @@ import {AuctionFactory} from "../../src/AuctionFactory.sol";
 import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
 import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
+import {MockBidderContract} from "../mocks/MockBidderContract.sol";
 
 // Auction Contract balance should be 0 after the auction ends
 contract HundredDollarAuctionTest is Test {
@@ -36,22 +37,24 @@ contract HundredDollarAuctionTest is Test {
         (factory, usdt, faucet) = deployer.run();
 
         // fund users to test
-        vm.prank(ALICE);
+        vm.prank(ALICE, ALICE);
         faucet.requestUSDT();
-        vm.prank(BILLY);
+        vm.prank(BILLY, BILLY);
         faucet.requestUSDT();
-        vm.prank(CINDY);
+        vm.prank(CINDY, CINDY);
         faucet.requestUSDT();
-        vm.prank(AUCTIONEER);
+        vm.prank(AUCTIONEER, AUCTIONEER);
         faucet.requestUSDT();
 
         startingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
         startingFirstBidderBalance = usdt.balanceOf(ALICE);
         startingSecondBidderBalance = usdt.balanceOf(BILLY);
 
-        // create auction
-        vm.startPrank(AUCTIONEER);
+        // // create auction
+        vm.startPrank(AUCTIONEER, AUCTIONEER);
         usdt.approve(address(factory), AMOUNT_DEPOSIT);
+        console.log("auctioneer:", AUCTIONEER);
+        console.log("address(this):", address(this));
         auction = HundredDollarAuction(factory.openAuction());
         vm.stopPrank();
     }
@@ -67,14 +70,14 @@ contract HundredDollarAuctionTest is Test {
     }
 
     function _joinAsFirstBidder() private {
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), FIRST_BID_AMOUNT);
         auction.joinAuction(FIRST_BID_AMOUNT);
         vm.stopPrank();
     }
 
     function _joinAsSecondBidder() private {
-        vm.startPrank(BILLY);
+        vm.startPrank(BILLY, BILLY);
         usdt.approve(address(auction), SECOND_BID_AMOUNT);
         auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
@@ -102,7 +105,7 @@ contract HundredDollarAuctionTest is Test {
 
     function testAuctioneerCantJoinAuction() public {
         vm.expectRevert(HundredDollarAuction.HundredDollarAuction__AuctioneerCannotJoinAsBidder.selector);
-        vm.prank(AUCTIONEER);
+        vm.prank(AUCTIONEER, AUCTIONEER);
         auction.joinAuction(FIRST_BID_AMOUNT);
     }
 
@@ -111,7 +114,7 @@ contract HundredDollarAuctionTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(HundredDollarAuction.HundredDollarAuction__BelowMinimumBidAmount.selector, amountToBid)
         );
-        vm.prank(ALICE);
+        vm.prank(ALICE, ALICE);
         auction.joinAuction(amountToBid);
     }
 
@@ -144,7 +147,7 @@ contract HundredDollarAuctionTest is Test {
         // same amount as first bidder, means it will not outbid
         uint256 amountToBid = FIRST_BID_AMOUNT;
 
-        vm.startPrank(BILLY);
+        vm.startPrank(BILLY, BILLY);
         usdt.approve(address(auction), amountToBid);
 
         vm.expectRevert(
@@ -160,7 +163,7 @@ contract HundredDollarAuctionTest is Test {
 
     function testFirstBidderCannotJoinAsSecondBidder() public firstBidderJoined {
         // Alice is the first bidder
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), SECOND_BID_AMOUNT);
 
         vm.expectRevert(
@@ -286,7 +289,7 @@ contract HundredDollarAuctionTest is Test {
         uint256 aliceBidAmount = auction.getBidAmount(ALICE);
         uint256 amountToOutbid = aliceBidAmount + amountToIncrementBid;
 
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
 
         vm.expectRevert(
@@ -310,7 +313,7 @@ contract HundredDollarAuctionTest is Test {
     {
         uint256 amountToIncrementBid = 3e18;
 
-        vm.startPrank(CINDY);
+        vm.startPrank(CINDY, CINDY);
         usdt.approve(address(auction), amountToIncrementBid);
         vm.expectRevert(
             HundredDollarAuction.HundredDollarAuction__NotABidder.selector
@@ -337,7 +340,7 @@ contract HundredDollarAuctionTest is Test {
         uint256 validStateForOutbidFunction = 1; // ACTIVE
         uint256 amountToIncrementBid = 3e18;
 
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -368,7 +371,7 @@ contract HundredDollarAuctionTest is Test {
          */
         uint256 validStateForJoinAuctionFunction = 0; // OPEN
 
-        vm.startPrank(CINDY);
+        vm.startPrank(CINDY, CINDY);
         usdt.approve(address(auction), SECOND_BID_AMOUNT);
 
         vm.expectRevert(
@@ -390,7 +393,7 @@ contract HundredDollarAuctionTest is Test {
         uint256 amountToIncrementBid = 10e18;
         uint256 startingAliceBid = auction.getBidAmount(ALICE);
 
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
         auction.outbid(amountToIncrementBid);
         vm.stopPrank();
@@ -409,7 +412,7 @@ contract HundredDollarAuctionTest is Test {
     {
         uint256 amountToIncrementBid = 10e18;
 
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
         auction.outbid(amountToIncrementBid);
         vm.stopPrank();
@@ -425,7 +428,7 @@ contract HundredDollarAuctionTest is Test {
         uint256 amountToIncrementBid = 10e18;
         uint256 startingAuctionBalance = usdt.balanceOf(address(auction));
 
-        vm.startPrank(ALICE);
+        vm.startPrank(ALICE, ALICE);
         usdt.approve(address(auction), amountToIncrementBid);
         auction.outbid(amountToIncrementBid);
         vm.stopPrank();
@@ -459,7 +462,7 @@ contract HundredDollarAuctionTest is Test {
                 validStateForForfeitFunction // State should be ACTIVE to call forfeit function
             )
         );
-        vm.prank(ALICE);
+        vm.prank(ALICE, ALICE);
         auction.forfeit();
     }
 
@@ -471,7 +474,7 @@ contract HundredDollarAuctionTest is Test {
         vm.expectRevert(
             HundredDollarAuction.HundredDollarAuction__NotABidder.selector
         );
-        vm.prank(CINDY);
+        vm.prank(CINDY, CINDY);
         auction.forfeit();
     }
 }
