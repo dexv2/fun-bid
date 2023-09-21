@@ -96,6 +96,17 @@ contract HundredDollarAuctionTest is Test {
     //     assert(timestamp3 > timestamp2);
     // }
 
+    function testCannotJoinBidIfNotEOA() public {
+        vm.startPrank(ALICE, ALICE);
+        MockBidderContract mockBidderContract = new MockBidderContract();
+        usdt.approve(address(mockBidderContract), FIRST_BID_AMOUNT);
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__NotEOA.selector
+        );
+        mockBidderContract.joinAuction(address(auction), address(usdt), FIRST_BID_AMOUNT);
+        vm.stopPrank();
+    }
+
     function testCanCreateAuctionWithDepositAndFundsForAuctionPrice() public {
         uint256 endingAuctioneerBalance = usdt.balanceOf(AUCTIONEER);
 
