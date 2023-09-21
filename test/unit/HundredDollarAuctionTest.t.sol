@@ -9,6 +9,7 @@ import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
 import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
 import {MockBidderContract} from "../mocks/MockBidderContract.sol";
+import {MockAuctioneerContract} from "../mocks/MockAuctioneerContract.sol";
 
 // Auction Contract balance should be 0 after the auction ends
 contract HundredDollarAuctionTest is Test {
@@ -102,6 +103,17 @@ contract HundredDollarAuctionTest is Test {
             HundredDollarAuction.HundredDollarAuction__NotEOA.selector
         );
         mockBidderContract.joinAuction(address(auction), address(usdt), FIRST_BID_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function testCannotBeAnAuctioneerIfNotEOA() public {
+        vm.startPrank(AUCTIONEER, AUCTIONEER);
+        MockAuctioneerContract mockAuctioneerContract = new MockAuctioneerContract();
+        usdt.approve(address(mockAuctioneerContract), AMOUNT_DEPOSIT);
+        vm.expectRevert(
+            AuctionFactory.AuctionFactory__NotEOA.selector
+        );
+        mockAuctioneerContract.openAuction(address(factory), address(usdt));
         vm.stopPrank();
     }
 
