@@ -608,7 +608,7 @@ contract HundredDollarAuctionTest is Test {
         assertEq(factoryBalanceAfterForfeit, factoryBalanceBeforeForfeit + totalBids);
     }
 
-    function testCannotWithdrawWhenStateIsActive()
+    function testCannotWithdrawWhenStateIsNotEnded()
         public
         firstBidderJoined
         secondBidderJoined
@@ -635,5 +635,23 @@ contract HundredDollarAuctionTest is Test {
         );
         vm.prank(ALICE, ALICE);
         auction.withdraw();
+    }
+
+    function testCannotWithdrawWhenNoWithdrawableAmount()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        vm.startPrank(ALICE, ALICE);
+        auction.forfeit();
+
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__NoOutstandingAmountWithdrawable.selector
+        );
+
+        // Since ALICE is the one who forfeits, she is the losing bidder
+        // therefore, she has no withdrawable amount
+        auction.withdraw();
+        vm.stopPrank();
     }
 }
