@@ -175,9 +175,9 @@ contract HundredDollarAuction {
         _;
     }
 
-    ///////////////////////////
-    // Public Functions      //
-    ///////////////////////////
+    /////////////////////////////
+    // External Functions      //
+    /////////////////////////////
 
     /**
      * @param amountToBid the amount user is willing to bid for $100
@@ -186,7 +186,7 @@ contract HundredDollarAuction {
      * meaning this function can only be called successfully twice in its entirety
      */
     function joinAuction(uint256 amountToBid)
-        public
+        external
         atState(State.OPEN)
         bidAmountChecked(amountToBid)
     {
@@ -215,7 +215,7 @@ contract HundredDollarAuction {
      * @notice outbid your opponent to win the $100 price!!
      */
     function outbid(uint256 bidIncrement)
-        public
+        external
         onlyBidder
         atState(State.ACTIVE)
         bidAmountChecked(bidIncrement)
@@ -240,7 +240,7 @@ contract HundredDollarAuction {
      * @notice calling this function will make opponent the winner by default.
      */
     function forfeit()
-        public
+        external
         onlyBidder
         atState(State.ACTIVE)
     {
@@ -252,7 +252,7 @@ contract HundredDollarAuction {
      * to cancel the auction at any states, except State.ENDED
      */
     function cancelAuction()
-        public
+        external
         onlyAuctioneer
     {
         if (!_isIdle()) {
@@ -302,7 +302,7 @@ contract HundredDollarAuction {
     }
 
     function endAuction()
-        public
+        external
         onlyAuctioneer
         atState(State.ACTIVE)
     {
@@ -314,7 +314,7 @@ contract HundredDollarAuction {
     }
 
     // follows CEI
-    function withdraw() public atState(State.ENDED) {
+    function withdraw() external atState(State.ENDED) {
         uint256 amountWithdrawable = s_amountWithdrawable[msg.sender];
         if (amountWithdrawable <= 0) {
             revert HundredDollarAuction__NoOutstandingAmountWithdrawable();
