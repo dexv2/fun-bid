@@ -607,4 +607,33 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(factoryBalanceAfterForfeit, factoryBalanceBeforeForfeit + totalBids);
     }
+
+    function testCannotWithdrawWhenStateIsActive()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        /**
+         * 
+         * Current State is ACTIVE and not yet ENDED
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+        uint256 validStateForWithdrawFunction = 2; // ENDED
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                HundredDollarAuction.HundredDollarAuction__FunctionCalledAtIncorrectState.selector,
+                auction.getState(), // Current State is ACTIVE and not yet ENDED
+                validStateForWithdrawFunction // State should be ENDED to withdraw
+            )
+        );
+        vm.prank(ALICE, ALICE);
+        auction.withdraw();
+    }
 }
