@@ -495,4 +495,8 @@ contract HundredDollarAuction {
     function getAmountWithdrawable(address bidder) public view returns (uint256) {
         return s_amountWithdrawable[bidder];
     }
+
+    function getTotalBids() public view returns (uint256) {
+        return _totalBids();
+    }
 }

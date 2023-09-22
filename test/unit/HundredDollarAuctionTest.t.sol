@@ -124,7 +124,7 @@ contract HundredDollarAuctionTest is Test {
         assertEq(endingAuctioneerBalance, startingAuctioneerBalance - AMOUNT_DEPOSIT);
     }
 
-    function testAuctioneerCantJoinAuction() public {
+    function testAuctioneerCannotJoinAuction() public {
         vm.expectRevert(HundredDollarAuction.HundredDollarAuction__AuctioneerCannotJoinAsBidder.selector);
         vm.prank(AUCTIONEER, AUCTIONEER);
         auction.joinAuction(FIRST_BID_AMOUNT);
@@ -575,5 +575,20 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(amountWithdrawable, AUCTION_PRICE);
         assertEq(endingWinnerBalance, startingWinnerBalance + amountWithdrawable);
+    }
+
+    function testAuctioneerWillReceiveTheDepositedAmountWhenBidderForfeits()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 auctioneerBalanceBeforeForfeit = usdt.balanceOf(AUCTIONEER);
+
+        vm.prank(ALICE, ALICE);
+        auction.forfeit();
+
+        uint256 auctioneerBalanceAfterForfeit = usdt.balanceOf(AUCTIONEER);
+
+        assertEq(auctioneerBalanceAfterForfeit, auctioneerBalanceBeforeForfeit + AMOUNT_DEPOSIT);
     }
 }
