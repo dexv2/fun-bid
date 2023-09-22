@@ -591,4 +591,20 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(auctioneerBalanceAfterForfeit, auctioneerBalanceBeforeForfeit + AMOUNT_DEPOSIT);
     }
+
+    function testFactoryWillReceiveTheTotalBidsWhenBidderForfeits()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 totalBids = auction.getTotalBids();
+        uint256 factoryBalanceBeforeForfeit = usdt.balanceOf(address(factory));
+
+        vm.prank(ALICE, ALICE);
+        auction.forfeit();
+
+        uint256 factoryBalanceAfterForfeit = usdt.balanceOf(address(factory));
+
+        assertEq(factoryBalanceAfterForfeit, factoryBalanceBeforeForfeit + totalBids);
+    }
 }
