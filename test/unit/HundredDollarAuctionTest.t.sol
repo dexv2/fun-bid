@@ -518,4 +518,27 @@ contract HundredDollarAuctionTest is Test {
         vm.prank(CINDY, CINDY);
         auction.forfeit();
     }
+
+    function testSetStateAsEndedWhenABidderForfeits()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        /**
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+
+        uint256 endedState = 2;
+
+        vm.prank(ALICE, ALICE);
+        auction.forfeit();
+
+        assertEq(uint256(auction.getState()), endedState);
+    }
 }

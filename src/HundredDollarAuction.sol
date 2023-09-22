@@ -396,11 +396,12 @@ contract HundredDollarAuction {
     function _endAuction(address winner) private {
         uint256 totalBids = _totalBids();
         address auctioneer = s_auctioneer;
-        // reward the auctioneer based on the auction profit
-        int256 auctionProfit = int256(totalBids - AUCTION_PRICE);
+
         uint256 auctioneerReward;
-        if (auctionProfit > 0) {
-            auctioneerReward = uint256(auctionProfit) * REWARD_THRESHOLD / PRECISION;
+        if (totalBids > AUCTION_PRICE) {
+            // reward the auctioneer based on the auction profit
+            uint256 auctionProfit = totalBids - AUCTION_PRICE;
+            auctioneerReward = auctionProfit * REWARD_THRESHOLD / PRECISION;
         }
         // amount to return to factory
         uint256 retrieveAmount = totalBids - auctioneerReward;
