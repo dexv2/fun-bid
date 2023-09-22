@@ -555,4 +555,25 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(winner, opponent);
     }
+
+    function testWinnerCanWithdrawAuctionPriceWhenOpponentForfeits()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        vm.prank(ALICE, ALICE);
+        auction.forfeit();
+
+        address winner = auction.getWinningBidder();
+        uint256 amountWithdrawable = auction.getAmountWithdrawable(winner);
+        uint256 startingWinnerBalance = usdt.balanceOf(winner);
+
+        vm.prank(winner);
+        auction.withdraw();
+
+        uint256 endingWinnerBalance = usdt.balanceOf(winner);
+
+        assertEq(amountWithdrawable, AUCTION_PRICE);
+        assertEq(endingWinnerBalance, startingWinnerBalance + amountWithdrawable);
+    }
 }
