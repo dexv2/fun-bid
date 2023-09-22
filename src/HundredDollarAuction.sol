@@ -395,7 +395,6 @@ contract HundredDollarAuction {
 
     function _endAuction(address winner) private {
         uint256 totalBids = _totalBids();
-        address winningBidder = s_winningBidder;
         address auctioneer = s_auctioneer;
         // reward the auctioneer based on the auction profit
         int256 auctionProfit = int256(totalBids - AUCTION_PRICE);
@@ -408,10 +407,11 @@ contract HundredDollarAuction {
 
         s_state = State.ENDED;
         s_amountWithdrawable[winner] = AUCTION_PRICE;
+        s_winningBidder = winner;
 
         _returnDepositAndFunds(retrieveAmount, AMOUNT_DEPOSIT + auctioneerReward);
 
-        emit AuctionEnded(address(this), winningBidder, auctioneer, s_opponentBidder[winningBidder], s_currentBid, s_bidAmounts[s_opponentBidder[winningBidder]], totalBids);
+        emit AuctionEnded(address(this), winner, auctioneer, s_opponentBidder[winner], s_currentBid, s_bidAmounts[s_opponentBidder[winner]], totalBids);
     }
 
     function _updateCurrentBid(uint256 amountToBid) private {

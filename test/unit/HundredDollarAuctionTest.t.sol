@@ -406,6 +406,26 @@ contract HundredDollarAuctionTest is Test {
         vm.stopPrank();
     }
 
+    function testSetStateAsActiveWhenTwoBiddersJoined()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        /**
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+
+        uint256 activeState = 1;
+        
+        assertEq(uint256(auction.getState()), activeState);
+    }
+
     function testUpdatesBidAmountsAfterOutbidding()
         public
         firstBidderJoined
