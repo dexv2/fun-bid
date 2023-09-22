@@ -541,4 +541,18 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(uint256(auction.getState()), endedState);
     }
+
+    function testSetOpponentAsWinnerWhenBidderForfeits()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        vm.prank(ALICE, ALICE);
+        auction.forfeit();
+
+        address winner = auction.getWinningBidder();
+        address opponent = auction.getOpponentBidder(ALICE);
+
+        assertEq(winner, opponent);
+    }
 }
