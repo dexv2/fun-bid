@@ -18,7 +18,7 @@ import {USDTFaucet} from "./USDTFaucet.sol";
  * 2. Fund the Auction contract by 100 USDT upon creation which should be the price of the winning bidder.
  */
 contract AuctionFactory is Ownable {
-    error AuctionFactory__TransferFailed();
+    error AuctionFactory__TransferFromFailed();
     error AuctionFactory__MintFailed();
     error AuctionFactory__NotEOA();
 
@@ -50,7 +50,7 @@ contract AuctionFactory is Ownable {
 
         bool success = i_usdt.transferFrom(msg.sender, address(auction), AMOUNT_DEPOSIT);
         if (!success) {
-            revert AuctionFactory__TransferFailed();
+            revert AuctionFactory__TransferFromFailed();
         }
 
         /**

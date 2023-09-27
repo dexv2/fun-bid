@@ -5,12 +5,9 @@ pragma solidity 0.8.18;
 import {Test, console} from "forge-std/Test.sol";
 import {DeployAuctionFactory} from "../../script/DeployAuctionFactory.s.sol";
 import {AuctionFactory} from "../../src/AuctionFactory.sol";
-import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
 import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
-import {MockBidderContract} from "../mocks/MockBidderContract.sol";
 import {MockAuctioneerContract} from "../mocks/MockAuctioneerContract.sol";
-import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 
 // Auction Contract balance should be 0 after the auction ends
@@ -18,7 +15,6 @@ contract AuctionFactoryTest is Test {
     AuctionFactory factory;
     USDTFaucet faucet;
     USDT usdt;
-    HundredDollarAuction auction;
 
     address public AUCTIONEER = makeAddr("auctioneer");
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
@@ -40,6 +36,27 @@ contract AuctionFactoryTest is Test {
             AuctionFactory.AuctionFactory__NotEOA.selector
         );
         mockAuctioneerContract.openAuction(address(factory), address(usdt));
+        vm.stopPrank();
+    }
+
+    function testRevertsIfTransferFromFails() public {
+        uint256 faucetFundAmount = 1_000_000_000_000e18;
+        MockFailedTransferFrom mockUsdt = new MockFailedTransferFrom();
+        USDTFaucet mockFaucet = new USDTFaucet(address(mockUsdt));
+        AuctionFactory mockFactory = new AuctionFactory(address(mockUsdt), address(mockFaucet));
+    
+        mockUsdt.mint(address(mockFaucet), faucetFundAmount);
+        mockUsdt.transferOwnership(address(mockFactory));
+
+        vm.startPrank(AUCTIONEER, AUCTIONEER);
+        mockFaucet.requestUSDT();
+
+        mockUsdt.approve(address(mockFactory), AMOUNT_DEPOSIT);
+        
+        vm.expectRevert(
+            AuctionFactory.AuctionFactory__TransferFromFailed.selector
+        );
+        mockFactory.openAuction();
         vm.stopPrank();
     }
 }

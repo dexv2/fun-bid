@@ -9,7 +9,6 @@ import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
 import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
 import {MockBidderContract} from "../mocks/MockBidderContract.sol";
-import {MockAuctioneerContract} from "../mocks/MockAuctioneerContract.sol";
 import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 
