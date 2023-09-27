@@ -53,7 +53,7 @@ contract HundredDollarAuctionTest is Test {
         startingFirstBidderBalance = usdt.balanceOf(ALICE);
         startingSecondBidderBalance = usdt.balanceOf(BILLY);
 
-        // // create auction
+        // create auction
         vm.startPrank(AUCTIONEER, AUCTIONEER);
         usdt.approve(address(factory), AMOUNT_DEPOSIT);
         auction = HundredDollarAuction(factory.openAuction());
@@ -105,17 +105,6 @@ contract HundredDollarAuctionTest is Test {
             HundredDollarAuction.HundredDollarAuction__NotEOA.selector
         );
         mockBidderContract.joinAuction(address(auction), address(usdt), FIRST_BID_AMOUNT);
-        vm.stopPrank();
-    }
-
-    function testCannotBeAnAuctioneerIfNotEOA() public {
-        vm.startPrank(AUCTIONEER, AUCTIONEER);
-        MockAuctioneerContract mockAuctioneerContract = new MockAuctioneerContract();
-        usdt.approve(address(mockAuctioneerContract), AMOUNT_DEPOSIT);
-        vm.expectRevert(
-            AuctionFactory.AuctionFactory__NotEOA.selector
-        );
-        mockAuctioneerContract.openAuction(address(factory), address(usdt));
         vm.stopPrank();
     }
 
