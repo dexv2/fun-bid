@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.18;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {USDT} from "./USDT.sol";
 import {HundredDollarAuction} from "./HundredDollarAuction.sol";
 import {USDTFaucet} from "./USDTFaucet.sol";
@@ -31,8 +31,8 @@ contract AuctionFactory is Ownable {
 
     event HundredDollarAuctionCreated(address indexed Auction);
 
-    constructor(USDT usdt, address faucet) {
-        i_usdt = usdt;
+    constructor(address usdt, address faucet) {
+        i_usdt = USDT(usdt);
         i_faucet = faucet;
     }
 

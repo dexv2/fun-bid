@@ -12,8 +12,8 @@ contract DeployAuctionFactory is Script {
         uint256 faucetFundAmount = 1_000_000_000_000e18;
         vm.startBroadcast();
         USDT usdt = new USDT();
-        USDTFaucet faucet = new USDTFaucet(usdt);
-        AuctionFactory factory = new AuctionFactory(usdt, address(faucet));
+        USDTFaucet faucet = new USDTFaucet(address(usdt));
+        AuctionFactory factory = new AuctionFactory(address(usdt), address(faucet));
 
         usdt.mint(address(faucet), faucetFundAmount);
         usdt.transferOwnership(address(factory));

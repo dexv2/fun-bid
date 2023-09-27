@@ -10,6 +10,8 @@ import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
 import {MockBidderContract} from "../mocks/MockBidderContract.sol";
 import {MockAuctioneerContract} from "../mocks/MockAuctioneerContract.sol";
+import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
+import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 
 // Auction Contract balance should be 0 after the auction ends
 contract HundredDollarAuctionTest is Test {
@@ -59,26 +61,26 @@ contract HundredDollarAuctionTest is Test {
     }
 
     modifier firstBidderJoined {
-        _joinAsFirstBidder();
+        _joinAsFirstBidder(auction, address(usdt));
         _;
     }
 
     modifier secondBidderJoined {
-        _joinAsSecondBidder();
+        _joinAsSecondBidder(auction, address(usdt));
         _;
     }
 
-    function _joinAsFirstBidder() private {
+    function _joinAsFirstBidder(HundredDollarAuction _auction, address _usdt) private {
         vm.startPrank(ALICE, ALICE);
-        usdt.approve(address(auction), FIRST_BID_AMOUNT);
-        auction.joinAuction(FIRST_BID_AMOUNT);
+        USDT(_usdt).approve(address(_auction), FIRST_BID_AMOUNT);
+        _auction.joinAuction(FIRST_BID_AMOUNT);
         vm.stopPrank();
     }
 
-    function _joinAsSecondBidder() private {
+    function _joinAsSecondBidder(HundredDollarAuction _auction, address _usdt) private {
         vm.startPrank(BILLY, BILLY);
-        usdt.approve(address(auction), SECOND_BID_AMOUNT);
-        auction.joinAuction(SECOND_BID_AMOUNT);
+        USDT(_usdt).approve(address(_auction), SECOND_BID_AMOUNT);
+        _auction.joinAuction(SECOND_BID_AMOUNT);
         vm.stopPrank();
     }
 
@@ -653,5 +655,36 @@ contract HundredDollarAuctionTest is Test {
         // therefore, she has no withdrawable amount
         auction.withdraw();
         vm.stopPrank();
+    }
+
+    function testRevertsIfTransferFails() public {
+        uint256 faucetFundAmount = 1_000_000_000_000e18;
+        MockFailedTransfer mockUsdt = new MockFailedTransfer();
+        USDTFaucet mockFaucet = new USDTFaucet(address(mockUsdt));
+        AuctionFactory mockFactory = new AuctionFactory(address(mockUsdt), address(mockFaucet));
+    
+        mockUsdt.mint(address(mockFaucet), faucetFundAmount);
+        mockUsdt.transferOwnership(address(mockFactory));
+
+        vm.prank(ALICE, ALICE);
+        mockFaucet.requestUSDT();
+        vm.prank(BILLY, BILLY);
+        mockFaucet.requestUSDT();
+        vm.startPrank(AUCTIONEER, AUCTIONEER);
+        mockFaucet.requestUSDT();
+
+        mockUsdt.approve(address(mockFactory), AMOUNT_DEPOSIT);
+        HundredDollarAuction mockAuction = HundredDollarAuction(mockFactory.openAuction());
+        vm.stopPrank();
+
+        _joinAsFirstBidder(mockAuction, address(mockUsdt));
+        _joinAsSecondBidder(mockAuction, address(mockUsdt));
+
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__TransferFailed.selector
+        );
+        vm.prank(ALICE, ALICE);
+        // calls ERC20 transfer function
+        mockAuction.forfeit();
     }
 }

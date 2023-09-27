@@ -15,8 +15,8 @@ contract USDTFaucet {
     uint256 private constant REQUEST_AMOUNT = 200e18;
     USDT private immutable i_usdt;
 
-    constructor(USDT usdt) {
-        i_usdt = usdt;
+    constructor(address usdt) {
+        i_usdt = USDT(usdt);
     }
 
     function requestUSDT() public {
