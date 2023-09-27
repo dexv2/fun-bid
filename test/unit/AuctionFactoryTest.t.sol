@@ -44,7 +44,7 @@ contract AuctionFactoryTest is Test {
         MockFailedTransferFrom mockUsdt = new MockFailedTransferFrom();
         USDTFaucet mockFaucet = new USDTFaucet(address(mockUsdt));
         AuctionFactory mockFactory = new AuctionFactory(address(mockUsdt), address(mockFaucet));
-    
+
         mockUsdt.mint(address(mockFaucet), faucetFundAmount);
         mockUsdt.transferOwnership(address(mockFactory));
 
