@@ -29,7 +29,8 @@ contract AuctionFactory is Ownable {
     address private immutable i_faucet;
     USDT private immutable i_usdt;
 
-    event HundredDollarAuctionCreated(address indexed Auction);
+    event HundredDollarAuctionCreated(address indexed auction);
+    event FaucetFunded(address indexed faucet, uint256 amountFunded);
 
     constructor(address usdt, address faucet) {
         i_usdt = USDT(usdt);
@@ -71,5 +72,7 @@ contract AuctionFactory is Ownable {
         if (!minted) {
             revert AuctionFactory__MintFailed();
         }
+
+        emit FaucetFunded(i_faucet, amountToFund);
     }
 }
