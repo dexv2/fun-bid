@@ -9,8 +9,8 @@ import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
 import {MockAuctioneerContract} from "../mocks/MockAuctioneerContract.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
+import {MockFailedMint} from "../mocks/MockFailedMint.sol";
 
-// Auction Contract balance should be 0 after the auction ends
 contract AuctionFactoryTest is Test {
     AuctionFactory factory;
     USDTFaucet faucet;
@@ -55,6 +55,27 @@ contract AuctionFactoryTest is Test {
         
         vm.expectRevert(
             AuctionFactory.AuctionFactory__TransferFromFailed.selector
+        );
+        mockFactory.openAuction();
+        vm.stopPrank();
+    }
+
+    function testRevertsIfMintFails() public {
+        uint256 faucetFundAmount = 1_000_000_000_000e18;
+        MockFailedMint mockUsdt = new MockFailedMint();
+        USDTFaucet mockFaucet = new USDTFaucet(address(mockUsdt));
+        AuctionFactory mockFactory = new AuctionFactory(address(mockUsdt), address(mockFaucet));
+
+        mockUsdt.mint(address(mockFaucet), faucetFundAmount);
+        mockUsdt.transferOwnership(address(mockFactory));
+
+        vm.startPrank(AUCTIONEER, AUCTIONEER);
+        mockFaucet.requestUSDT();
+
+        mockUsdt.approve(address(mockFactory), AMOUNT_DEPOSIT);
+
+        vm.expectRevert(
+            AuctionFactory.AuctionFactory__MintFailed.selector
         );
         mockFactory.openAuction();
         vm.stopPrank();
