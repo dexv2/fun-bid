@@ -737,4 +737,20 @@ contract HundredDollarAuctionTest is Test {
         vm.prank(AUCTIONEER, AUCTIONEER);
         auction.cancelAuction();
     }
+
+    function testReturnsDepositAndFundsAfterCancellationIfNoAuctioneer() public {
+        uint256 auctioneerBalanceBefore = usdt.balanceOf(AUCTIONEER);
+        uint256 factoryBalanceBefore = usdt.balanceOf(address(factory));
+
+        vm.warp(MIN_WAITING_TIME + 10);
+        vm.prank(AUCTIONEER);
+
+        auction.cancelAuction();
+
+        uint256 auctioneerBalanceAfter = usdt.balanceOf(AUCTIONEER);
+        uint256 factoryBalanceAfter = usdt.balanceOf(address(factory));
+
+        assertEq(auctioneerBalanceAfter, auctioneerBalanceBefore + AMOUNT_DEPOSIT);
+        assertEq(factoryBalanceAfter, factoryBalanceBefore + AUCTION_PRICE);
+    }
 }
