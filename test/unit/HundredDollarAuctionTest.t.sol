@@ -736,14 +736,17 @@ contract HundredDollarAuctionTest is Test {
         auction.cancelAuction();
     }
 
+    function _cancelAuction() public {
+        vm.warp(MIN_WAITING_TIME + 10);
+        vm.prank(AUCTIONEER);
+        auction.cancelAuction();
+    }
+
     function _returnAmountAfterCancellation() private {
         uint256 auctioneerBalanceBefore = usdt.balanceOf(AUCTIONEER);
         uint256 factoryBalanceBefore = usdt.balanceOf(address(factory));
 
-        vm.warp(MIN_WAITING_TIME + 10);
-        vm.prank(AUCTIONEER);
-
-        auction.cancelAuction();
+        _cancelAuction();
 
         uint256 auctioneerBalanceAfter = usdt.balanceOf(AUCTIONEER);
         uint256 factoryBalanceAfter = usdt.balanceOf(address(factory));
@@ -786,9 +789,7 @@ contract HundredDollarAuctionTest is Test {
         _outbid(BILLY, amountToIncrementBidByBilly);
 
         // Alice will get idle for 3 hours which means is the auction cancellable
-        vm.warp(MIN_WAITING_TIME + 10);
-        vm.prank(AUCTIONEER);
-        auction.cancelAuction();
+        _cancelAuction();
 
         // Auction is cancelled, Alice will be punished
         // Alice's total bid: $10
@@ -805,5 +806,23 @@ contract HundredDollarAuctionTest is Test {
         assertEq(auctioneerBalanceAfter, auctioneerBalanceBefore + AMOUNT_DEPOSIT + amountReward);
         assertEq(factoryBalanceAfter, factoryBalanceBefore + AUCTION_PRICE + amountToBeCollectedByFactory);
         assertEq(auction.getAmountWithdrawable(BILLY), auction.getBidAmount(BILLY) + amountReward);
+    }
+
+    function testSetStateAsEndedWhenTheAuctionGetsCancelled()
+        public
+    {
+        /**
+         * 
+         * enum State {
+         *     OPEN         // 0
+         *     ACTIVE       // 1
+         *     ENDED        // 2
+         * }
+         * 
+         */
+        uint256 endedState = 2;
+        _cancelAuction();
+
+        assertEq(uint256(auction.getState()), endedState);
     }
 }
