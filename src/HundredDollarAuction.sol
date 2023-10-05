@@ -255,11 +255,11 @@ contract HundredDollarAuction {
         external
         onlyAuctioneer
     {
-        if (!_isIdle()) {
-            revert HundredDollarAuction__AuctionNotYetIdle();
-        }
         if (s_state == State.ENDED) {
             revert HundredDollarAuction__AuctionAlreadyEnded();
+        }
+        if (!_isIdle()) {
+            revert HundredDollarAuction__AuctionNotYetIdle();
         }
 
         address auctioneer = s_auctioneer;

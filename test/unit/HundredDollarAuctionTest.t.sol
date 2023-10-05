@@ -31,6 +31,7 @@ contract HundredDollarAuctionTest is Test {
     uint256 private constant SECOND_BID_AMOUNT = 5e18;
     uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
+    uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
     uint256 private startingAuctioneerBalance;
     uint256 private startingFirstBidderBalance;
     uint256 private startingSecondBidderBalance;
@@ -718,6 +719,20 @@ contract HundredDollarAuctionTest is Test {
     function testCannotCancelAuctionIfNotIdle() public {
         vm.expectRevert(
             HundredDollarAuction.HundredDollarAuction__AuctionNotYetIdle.selector
+        );
+        vm.prank(AUCTIONEER, AUCTIONEER);
+        auction.cancelAuction();
+    }
+
+    function testCannotCancelAuctionIfAlreadyEnded()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        vm.prank(ALICE, ALICE);
+        auction.forfeit();
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__AuctionAlreadyEnded.selector
         );
         vm.prank(AUCTIONEER, AUCTIONEER);
         auction.cancelAuction();
