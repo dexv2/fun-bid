@@ -418,6 +418,13 @@ contract HundredDollarAuctionTest is Test {
         assertEq(uint256(auction.getState()), activeState);
     }
 
+    function _outbid(address bidder, uint256 bidIncrement) private {
+        vm.startPrank(bidder, bidder);
+        usdt.approve(address(auction), bidIncrement);
+        auction.outbid(bidIncrement);
+        vm.stopPrank();
+    }
+
     function testUpdatesBidAmountsAfterOutbidding()
         public
         firstBidderJoined
@@ -426,10 +433,7 @@ contract HundredDollarAuctionTest is Test {
         uint256 amountToIncrementBid = 10e18;
         uint256 startingAliceBid = auction.getBidAmount(ALICE);
 
-        vm.startPrank(ALICE, ALICE);
-        usdt.approve(address(auction), amountToIncrementBid);
-        auction.outbid(amountToIncrementBid);
-        vm.stopPrank();
+        _outbid(ALICE, amountToIncrementBid);
 
         uint256 currentBid = auction.getCurrentBid();
         uint256 endingAliceBid = auction.getBidAmount(ALICE);
@@ -445,10 +449,7 @@ contract HundredDollarAuctionTest is Test {
     {
         uint256 amountToIncrementBid = 10e18;
 
-        vm.startPrank(ALICE, ALICE);
-        usdt.approve(address(auction), amountToIncrementBid);
-        auction.outbid(amountToIncrementBid);
-        vm.stopPrank();
+        _outbid(ALICE, amountToIncrementBid);
 
         assertEq(auction.getWinningBidder(), ALICE);
     }
@@ -461,10 +462,7 @@ contract HundredDollarAuctionTest is Test {
         uint256 amountToIncrementBid = 10e18;
         uint256 startingAuctionBalance = usdt.balanceOf(address(auction));
 
-        vm.startPrank(ALICE, ALICE);
-        usdt.approve(address(auction), amountToIncrementBid);
-        auction.outbid(amountToIncrementBid);
-        vm.stopPrank();
+        _outbid(ALICE, amountToIncrementBid);
 
         uint256 endingAuctionBalance = usdt.balanceOf(address(auction));
 
@@ -763,6 +761,49 @@ contract HundredDollarAuctionTest is Test {
         firstBidderJoined
     {
         _returnAmountAfterCancellation();
-        assertEq(auction.getAmountWithdrawable(ALICE), FIRST_BID_AMOUNT);
+        assertEq(auction.getAmountWithdrawable(ALICE), auction.getBidAmount(ALICE));
+    }
+
+    function testConfiscateBidOfIdleBidderAndDistributeAsRewards()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 auctioneerBalanceBefore = usdt.balanceOf(AUCTIONEER);
+        uint256 factoryBalanceBefore = usdt.balanceOf(address(factory));
+
+        uint256 amountToIncrementBidByAlice = 9e18;
+        uint256 amountToIncrementBidByBilly = 6e18;
+
+        // Alice's initial bid: $1
+        // Bid increment: $9
+        // Total bid: $10
+        _outbid(ALICE, amountToIncrementBidByAlice);
+
+        // Billy's initial bid: $5
+        // Bid increment: $6
+        // Total bid: $11
+        _outbid(BILLY, amountToIncrementBidByBilly);
+
+        // Alice will get idle for 3 hours which means is the auction cancellable
+        vm.warp(MIN_WAITING_TIME + 10);
+        vm.prank(AUCTIONEER);
+        auction.cancelAuction();
+
+        // Auction is cancelled, Alice will be punished
+        // Alice's total bid: $10
+        // Her bid will be confiscated and will go to:
+        // Factory (80%) = $10 * 80% = $8
+        uint256 amountToBeCollectedByFactory = 8e18;
+        // Billy (10%) = $10 * 10% = $1
+        // Auctioneer (10%) = $10 * 10% = $1
+        uint256 amountReward = 1e18;
+
+        uint256 auctioneerBalanceAfter = usdt.balanceOf(AUCTIONEER);
+        uint256 factoryBalanceAfter = usdt.balanceOf(address(factory));
+
+        assertEq(auctioneerBalanceAfter, auctioneerBalanceBefore + AMOUNT_DEPOSIT + amountReward);
+        assertEq(factoryBalanceAfter, factoryBalanceBefore + AUCTION_PRICE + amountToBeCollectedByFactory);
+        assertEq(auction.getAmountWithdrawable(BILLY), auction.getBidAmount(BILLY) + amountReward);
     }
 }

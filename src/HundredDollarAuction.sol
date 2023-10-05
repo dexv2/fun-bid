@@ -280,7 +280,7 @@ contract HundredDollarAuction {
         }
         else {
             address winningBidder = s_winningBidder;
-            // punish the bidder who becomes idle, idle bidder's bid will be taken and divided by this contract:
+            // punish the bidder who becomes idle, idle bidder's bid will be confiscated and distributed by this contract:
             uint256 amountTaken = s_bidAmounts[s_opponentBidder[winningBidder]];
             // 80% will be collected by auction factory
             uint256 amountToCollect = amountTaken * FACTORY_COLLECTION_THRESHOLD / PRECISION;
