@@ -706,4 +706,12 @@ contract HundredDollarAuctionTest is Test {
         mockAuction.joinAuction(FIRST_BID_AMOUNT);
         vm.stopPrank();
     }
+
+    function testCannotCancelIfNotAuctioneer() public firstBidderJoined {
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__NotAnAuctioneer.selector
+        );
+        vm.prank(ALICE, ALICE);
+        auction.cancelAuction();
+    }
 }
