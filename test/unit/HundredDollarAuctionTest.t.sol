@@ -738,7 +738,7 @@ contract HundredDollarAuctionTest is Test {
         auction.cancelAuction();
     }
 
-    function testReturnsDepositAndFundsAfterCancellationIfNoAuctioneer() public {
+    function _returnAmountAfterCancellation() private {
         uint256 auctioneerBalanceBefore = usdt.balanceOf(AUCTIONEER);
         uint256 factoryBalanceBefore = usdt.balanceOf(address(factory));
 
@@ -752,5 +752,17 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(auctioneerBalanceAfter, auctioneerBalanceBefore + AMOUNT_DEPOSIT);
         assertEq(factoryBalanceAfter, factoryBalanceBefore + AUCTION_PRICE);
+    }
+
+    function testReturnsDepositAndFundsAfterCancellationIfNoAuctioneer() public {
+        _returnAmountAfterCancellation();
+    }
+
+    function testAddsWithrawableAmountToSingleJoinerBidderAfterCancellation()
+        public
+        firstBidderJoined
+    {
+        _returnAmountAfterCancellation();
+        assertEq(auction.getAmountWithdrawable(ALICE), FIRST_BID_AMOUNT);
     }
 }
