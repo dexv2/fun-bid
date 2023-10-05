@@ -714,4 +714,12 @@ contract HundredDollarAuctionTest is Test {
         vm.prank(ALICE, ALICE);
         auction.cancelAuction();
     }
+
+    function testCannotCancelAuctionIfNotIdle() public {
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__AuctionNotYetIdle.selector
+        );
+        vm.prank(AUCTIONEER, AUCTIONEER);
+        auction.cancelAuction();
+    }
 }
