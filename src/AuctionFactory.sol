@@ -57,22 +57,21 @@ contract AuctionFactory is Ownable {
         /**
          * The Auction contract gets a fund for the winning bidder.
          */
-        bool minted = i_usdt.mint(address(auction), AUCTION_PRICE);
-        if (!minted) {
-            revert AuctionFactory__MintFailed();
-        }
+        _mint(address(auction), AUCTION_PRICE);
 
         emit HundredDollarAuctionCreated(address(auction));
-
         return address(auction);
     }
 
     function fundFaucet(uint256 amountToFund) public onlyOwner {
-        bool minted = i_usdt.mint(i_faucet, amountToFund);
+        _mint(i_faucet, amountToFund);
+        emit FaucetFunded(i_faucet, amountToFund);
+    }
+
+    function _mint(address to, uint256 amount) private {
+        bool minted = i_usdt.mint(to, amount);
         if (!minted) {
             revert AuctionFactory__MintFailed();
         }
-
-        emit FaucetFunded(i_faucet, amountToFund);
     }
 }

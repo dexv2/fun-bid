@@ -80,4 +80,16 @@ contract AuctionFactoryTest is Test {
         mockFactory.openAuction();
         vm.stopPrank();
     }
+
+    function testUpdatesFaucetBalanceAfterFunding() public {
+        uint256 amountToFund = 100e18;
+        uint256 startingFaucetBalance = usdt.balanceOf(address(faucet));
+
+        vm.prank(factory.owner());
+        factory.fundFaucet(amountToFund);
+
+        uint256 endingFaucetBalance = usdt.balanceOf(address(faucet));
+
+        assertEq(endingFaucetBalance, startingFaucetBalance + amountToFund);
+    }
 }
