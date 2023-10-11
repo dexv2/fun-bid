@@ -737,9 +737,13 @@ contract HundredDollarAuctionTest is Test {
     }
 
     function _cancelAuction() public {
-        vm.warp(MIN_WAITING_TIME + 10);
+        uint256 timeSnapshot = auction.getLatestTimestamp();
+        uint256 timeElapsed = MIN_WAITING_TIME + 10;
+        vm.warp(timeElapsed);
         vm.prank(AUCTIONEER);
         auction.cancelAuction();
+        assert(auction.getIsIdle());
+        assertEq(auction.getIdleTime(), timeElapsed - timeSnapshot);
     }
 
     function _returnAmountAfterCancellation() private {

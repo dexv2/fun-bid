@@ -33,7 +33,6 @@ contract HundredDollarAuction {
     // Errors      //
     /////////////////
     error HundredDollarAuction__TransferFailed();
-    error HundredDollarAuction__BiddersOccupied();
     error HundredDollarAuction__AmountDidNotOutbid(uint256 currentBid, uint256 amountToBid);
     error HundredDollarAuction__BelowMinimumBidAmount(uint256 amountToBid);
     error HundredDollarAuction__NotABidder();
@@ -347,10 +346,6 @@ contract HundredDollarAuction {
      * The bidder will occupy the s_secondBidder slot
      */
     function _joinAuctionAsSecondBidder(uint256 amountToBid) private {
-        // only two bidders should be able to enter this auction
-        if (s_secondBidder != address(0)) {
-            revert HundredDollarAuction__BiddersOccupied();
-        }
         // should outbid the first bidder
         if (amountToBid <= s_bidAmounts[s_firstBidder]) {
             revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
