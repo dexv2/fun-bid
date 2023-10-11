@@ -853,4 +853,35 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(amountWithdrawable, AUCTION_PRICE);
     }
+
+    function testAuctioneerReceivesRewardsBasedOnAuctionProfit()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 bidIncrementForAlice = 99e18;
+        // Alice's initial bid: $1
+        // Alice's latest bid will be $1 + $99 = $100
+        _outbid(ALICE, bidIncrementForAlice);
+
+        // Billy's initial bid: $5
+        // Billy's latest bid will be $5 + $145 = $150
+        uint256 bidIncrementForBilly = 145e18;
+        _outbid(BILLY, bidIncrementForBilly);
+
+        // Total bids: $100 + $150 = $250
+        // Auction price: $100
+        // Profit: $250 - $100 = $150
+        // Auctioneer's reward: $150 * 10% = $15
+        uint256 auctioneerReward = 15e18;
+
+        uint256 auctionerBalanceBefore = usdt.balanceOf(AUCTIONEER);
+
+        vm.prank(AUCTIONEER);
+        auction.endAuction();
+
+        uint256 auctionerBalanceAfter = usdt.balanceOf(AUCTIONEER);
+
+        assertEq(auctionerBalanceAfter, auctionerBalanceBefore + AMOUNT_DEPOSIT + auctioneerReward);
+    }
 }
