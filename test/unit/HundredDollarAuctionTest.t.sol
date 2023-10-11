@@ -837,4 +837,20 @@ contract HundredDollarAuctionTest is Test {
         vm.prank(AUCTIONEER);
         auction.endAuction();
     }
+
+    function testSetAuctionPriceToAmountWithdrawableForWinningBidderWhenAuctionEnds()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        uint256 bidIncrement = 100e18;
+        _outbid(ALICE, bidIncrement);
+
+        vm.prank(AUCTIONEER);
+        auction.endAuction();
+
+        uint256 amountWithdrawable = auction.getAmountWithdrawable(ALICE);
+
+        assertEq(amountWithdrawable, AUCTION_PRICE);
+    }
 }
