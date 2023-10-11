@@ -767,7 +767,7 @@ contract HundredDollarAuctionTest is Test {
         assertEq(auction.getAmountWithdrawable(ALICE), auction.getBidAmount(ALICE));
     }
 
-    function testConfiscateBidOfIdleBidderAndDistributeAsRewards()
+    function testConfiscateBidOfIdleBidderAndDistributeAsRewardsAfterCancellation()
         public
         firstBidderJoined
         secondBidderJoined
@@ -788,7 +788,7 @@ contract HundredDollarAuctionTest is Test {
         // Total bid: $11
         _outbid(BILLY, amountToIncrementBidByBilly);
 
-        // Alice will get idle for 3 hours which means is the auction cancellable
+        // Alice will get idle for more than 3 hours which means is the auction cancellable
         _cancelAuction();
 
         // Auction is cancelled, Alice will be punished
@@ -824,5 +824,17 @@ contract HundredDollarAuctionTest is Test {
         _cancelAuction();
 
         assertEq(uint256(auction.getState()), endedState);
+    }
+
+    function testRevertsIfHighestBidIsLessThanAuctionPriceWhenTryingToEndBid()
+        public
+        firstBidderJoined
+        secondBidderJoined
+    {
+        vm.expectRevert(
+            HundredDollarAuction.HundredDollarAuction__CantEndWhenBidDoesntReachAuctionPrice.selector
+        );
+        vm.prank(AUCTIONEER);
+        auction.endAuction();
     }
 }
