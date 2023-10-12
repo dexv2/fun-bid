@@ -48,13 +48,10 @@ forge script script/DeployAuctionFactory.s.sol
 
 ## Testing
 
-1. Unit (ongoing)
-2. Integration
+1. Unit ✅
+2. Integration (ongoing)
 3. Forked
 4. Staging
-
-In this repo we will cover #1 and Fuzzing. 
-
 
 ```
 forge test
@@ -80,6 +77,9 @@ forge test --fork-url $SEPOLIA_RPC_URL
 forge coverage
 ```
 
+## Advanced Testing
+1. Fuzz
+2. Invariant
 
 # Deployment to a testnet or mainnet
 

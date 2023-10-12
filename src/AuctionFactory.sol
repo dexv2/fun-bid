@@ -74,4 +74,12 @@ contract AuctionFactory is Ownable {
             revert AuctionFactory__MintFailed();
         }
     }
+
+    function getUSDTAddress() external view returns (address) {
+        return address(i_usdt);
+    }
+
+    function getFaucetAddress() external view returns (address) {
+        return address(i_faucet);
+    }
 }
