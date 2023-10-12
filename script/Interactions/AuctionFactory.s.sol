@@ -4,12 +4,16 @@ pragma solidity 0.8.18;
 
 import {Script, console} from "forge-std/Script.sol";
 import {DevOpsTools} from "foundry-devops/src/DevOpsTools.sol";
-import {AuctionFactory} from "../src/AuctionFactory.sol";
-import {USDTFaucet} from "../src/USDTFaucet.sol";
-import {USDT} from "../src/USDT.sol";
+import {AuctionFactory} from "../../src/AuctionFactory.sol";
+import {USDTFaucet} from "../../src/USDTFaucet.sol";
+import {USDT} from "../../src/USDT.sol";
 
 contract FactoryOpenAuction is Script {
-    function execute(address mostRecentDeployedFactory, address mostRecentDeployedFaucet, address mostRecentDeployedUSDT) public returns (address) {
+    function execute(
+        address mostRecentDeployedFactory,
+        address mostRecentDeployedFaucet,
+        address mostRecentDeployedUSDT
+    ) public returns (address) {
         uint256 amountDeposit = 10e18;
 
         vm.startBroadcast();
@@ -35,6 +39,11 @@ contract FactoryOpenAuction is Script {
             "USDT", 
             block.chainid
         );
-        execute(mostRecentDeployedFactory, mostRecentDeployedFaucet, mostRecentDeployedUSDT);
+
+        execute(
+            mostRecentDeployedFactory,
+            mostRecentDeployedFaucet,
+            mostRecentDeployedUSDT
+        );
     }
 }
