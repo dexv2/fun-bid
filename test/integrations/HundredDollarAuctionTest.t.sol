@@ -104,4 +104,17 @@ contract HundredDollarAuctionTestIntegrations is Test {
         assertEq(startingBalanceAlice, endingBalanceAlice + auction.getBidAmount(ALICE));
         assertEq(startingBalanceBilly, endingBalanceBilly + auction.getBidAmount(BILLY));
     }
+
+    function testBidderCanForfeitAndWinnerCanWithdrawPriceInteractions() public {
+        _joinAuctionAndOutbidEachOther();
+        _forfeitAuction(ALICE);
+
+        uint256 balanceBeforeWithdrawalBilly = usdt.balanceOf(BILLY);
+        uint256 amountWithdrawable = auction.getAmountWithdrawable(BILLY);
+        _withdrawAuction(BILLY);
+        uint256 balanceAfterWithdrawalBilly = usdt.balanceOf(BILLY);
+
+        assertEq(amountWithdrawable, AUCTION_PRICE);
+        assertEq(balanceAfterWithdrawalBilly, balanceBeforeWithdrawalBilly + AUCTION_PRICE);
+    }
 }
