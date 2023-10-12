@@ -3,82 +3,84 @@
 pragma solidity 0.8.18;
 
 import {Script, console} from "forge-std/Script.sol";
-import {DevOpsTools} from "foundry-devops/src/DevOpsTools.sol";
-import {AuctionFactory} from "../../src/AuctionFactory.sol";
-import {USDTFaucet} from "../../src/USDTFaucet.sol";
-import {USDT} from "../../src/USDT.sol";
 import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
 
 contract JoinAuction is Script {
     function execute(
         address auction,
-        uint256 amountToBid
+        uint256 amountToBid,
+        address account
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         HundredDollarAuction(auction).joinAuction(amountToBid);
         vm.stopBroadcast();
 
-        console.log(msg.sender, "joined with bid amount:", amountToBid);
+        console.log(account, "joined with bid amount:", amountToBid);
     }
 }
 
 contract OutbidAuction is Script {
     function execute(
         address auction,
-        uint256 bidIncrement
+        uint256 bidIncrement,
+        address account
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         HundredDollarAuction(auction).outbid(bidIncrement);
         vm.stopBroadcast();
 
-        console.log(msg.sender, "outbid with amount:", bidIncrement);
+        console.log(account, "outbid with amount:", bidIncrement);
     }
 }
 
 contract ForfeitAuction is Script {
     function execute(
-        address auction
+        address auction,
+        address account
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         HundredDollarAuction(auction).forfeit();
         vm.stopBroadcast();
 
-        console.log(msg.sender, "forfeited");
+        console.log(account, "forfeited");
     }
 }
 
 contract CancelAuction is Script {
     function execute(
-        address auction
+        address auction,
+        address account
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         HundredDollarAuction(auction).cancelAuction();
         vm.stopBroadcast();
 
-        console.log(msg.sender, "cancelled the auction");
+        console.log(account, "cancelled the auction");
     }
 }
 
 contract EndAuction is Script {
     function execute(
-        address auction
+        address auction,
+        address account
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         HundredDollarAuction(auction).endAuction();
         vm.stopBroadcast();
 
-        console.log(msg.sender, "ended the auction");
+        console.log(account, "ended the auction");
     }
 }
 
 contract WithdrawAuction is Script {
     function execute(
-        address auction
+        address auction,
+        address account
     ) public {
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         HundredDollarAuction(auction).withdraw();
         vm.stopBroadcast();
 
-        console.log(msg.sender, "withdrawn their winning amount");
+        console.log(account, "withdrawn their winning amount");
     }
 }

@@ -12,17 +12,19 @@ contract FactoryOpenAuction is Script {
     function execute(
         address mostRecentDeployedFactory,
         address mostRecentDeployedFaucet,
-        address mostRecentDeployedUSDT
+        address mostRecentDeployedUSDT,
+        address account
     ) public returns (address) {
         uint256 amountDeposit = 10e18;
 
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         USDTFaucet(mostRecentDeployedFaucet).requestUSDT();
         USDT(mostRecentDeployedUSDT).approve(mostRecentDeployedFactory, amountDeposit);
         address auction = AuctionFactory(mostRecentDeployedFactory).openAuction();
         vm.stopBroadcast();
 
         console.log("Auction deployed at address:", auction);
+        console.log("Deployer:", account);
         return auction;
     }
 
@@ -43,7 +45,8 @@ contract FactoryOpenAuction is Script {
         execute(
             mostRecentDeployedFactory,
             mostRecentDeployedFaucet,
-            mostRecentDeployedUSDT
+            mostRecentDeployedUSDT,
+            msg.sender
         );
     }
 }

@@ -9,12 +9,12 @@ import {USDTFaucet} from "../../src/USDTFaucet.sol";
 import {USDT} from "../../src/USDT.sol";
 
 contract FaucetRequestUSDT is Script {
-    function execute(address mostRecentDeployedFaucet) public {
-        vm.startBroadcast();
+    function execute(address mostRecentDeployedFaucet, address account) public {
+        vm.startBroadcast(account);
         USDTFaucet(mostRecentDeployedFaucet).requestUSDT();
         vm.stopBroadcast();
 
-        console.log("USDT requested by:", msg.sender);
+        console.log(account, "requested USDT");
     }
 
     function run() external {
@@ -23,6 +23,6 @@ contract FaucetRequestUSDT is Script {
             block.chainid
         );
 
-        execute(mostRecentDeployedFaucet);
+        execute(mostRecentDeployedFaucet, msg.sender);
     }
 }
