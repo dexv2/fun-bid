@@ -43,6 +43,65 @@ contract HundredDollarAuctionTestIntegrations is Test {
         requestUsdt.execute(address(faucet), AUCTIONEER);
 
         // create auction
-        openAuction.execute(address(factory), address(faucet), address(usdt), AUCTIONEER);
+        auction = HundredDollarAuction(
+            openAuction.execute(
+                address(factory),
+                address(faucet),
+                address(usdt),
+                AUCTIONEER
+            )
+        );
+    }
+
+    function _joinAuction(address account, uint256 amountToBid) private {
+        JoinAuction joinAuction = new JoinAuction();
+        joinAuction.execute(address(auction), amountToBid, address(usdt), account);
+    }
+
+    function _outbidAuction(address account, uint256 bidIncrement) private {
+        OutbidAuction outbidAuction = new OutbidAuction();
+        outbidAuction.execute(address(auction), bidIncrement, address(usdt), account);
+    }
+
+    function _forfeitAuction(address account) private {
+        ForfeitAuction forfeitAuction = new ForfeitAuction();
+        forfeitAuction.execute(address(auction), account);
+    }
+
+    function _cancelAuction(address account) private {
+        CancelAuction cancelAuction = new CancelAuction();
+        cancelAuction.execute(address(auction), account);
+    }
+
+    function _endAuction(address account) private {
+        EndAuction endAuction = new EndAuction();
+        endAuction.execute(address(auction), account);
+    }
+
+    function _withdrawAuction(address account) private {
+        WithdrawAuction withdrawAuction = new WithdrawAuction();
+        withdrawAuction.execute(address(auction), account);
+    }
+
+    function _joinAuctionAndOutbidEachOther() private {
+        uint256 amountToIncrementBidAlice = 9e18;
+        uint256 amountToIncrementBidBilly = 10e18;
+        _joinAuction(ALICE, FIRST_BID_AMOUNT);
+        _joinAuction(BILLY, SECOND_BID_AMOUNT);
+        _outbidAuction(ALICE, amountToIncrementBidAlice);
+        _outbidAuction(BILLY, amountToIncrementBidBilly);
+    }
+
+    function testUsersCanJoinAuctionAndOutBidInteractions() public {
+        uint256 startingBalanceAlice = usdt.balanceOf(ALICE);
+        uint256 startingBalanceBilly = usdt.balanceOf(BILLY);
+
+        _joinAuctionAndOutbidEachOther();
+
+        uint256 endingBalanceAlice = usdt.balanceOf(ALICE);
+        uint256 endingBalanceBilly = usdt.balanceOf(BILLY);
+
+        assertEq(startingBalanceAlice, endingBalanceAlice + auction.getBidAmount(ALICE));
+        assertEq(startingBalanceBilly, endingBalanceBilly + auction.getBidAmount(BILLY));
     }
 }

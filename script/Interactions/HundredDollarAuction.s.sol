@@ -4,14 +4,17 @@ pragma solidity 0.8.18;
 
 import {Script, console} from "forge-std/Script.sol";
 import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
+import {USDT} from "../../src/USDT.sol";
 
 contract JoinAuction is Script {
     function execute(
         address auction,
         uint256 amountToBid,
+        address usdt,
         address account
     ) public {
         vm.startBroadcast(account);
+        USDT(usdt).approve(address(auction), amountToBid);
         HundredDollarAuction(auction).joinAuction(amountToBid);
         vm.stopBroadcast();
 
@@ -23,9 +26,11 @@ contract OutbidAuction is Script {
     function execute(
         address auction,
         uint256 bidIncrement,
+        address usdt,
         address account
     ) public {
         vm.startBroadcast(account);
+        USDT(usdt).approve(address(auction), bidIncrement);
         HundredDollarAuction(auction).outbid(bidIncrement);
         vm.stopBroadcast();
 
