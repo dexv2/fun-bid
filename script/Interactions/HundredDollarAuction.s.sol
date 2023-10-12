@@ -17,6 +17,8 @@ contract JoinAuction is Script {
         vm.startBroadcast();
         HundredDollarAuction(auction).joinAuction(amountToBid);
         vm.stopBroadcast();
+
+        console.log(msg.sender, "joined with bid amount:", amountToBid);
     }
 }
 
@@ -28,6 +30,8 @@ contract OutbidAuction is Script {
         vm.startBroadcast();
         HundredDollarAuction(auction).outbid(bidIncrement);
         vm.stopBroadcast();
+
+        console.log(msg.sender, "outbid with amount:", bidIncrement);
     }
 }
 
@@ -38,6 +42,8 @@ contract ForfeitAuction is Script {
         vm.startBroadcast();
         HundredDollarAuction(auction).forfeit();
         vm.stopBroadcast();
+
+        console.log(msg.sender, "forfeited");
     }
 }
 
@@ -48,6 +54,8 @@ contract CancelAuction is Script {
         vm.startBroadcast();
         HundredDollarAuction(auction).cancelAuction();
         vm.stopBroadcast();
+
+        console.log(msg.sender, "cancelled the auction");
     }
 }
 
@@ -58,6 +66,8 @@ contract EndAuction is Script {
         vm.startBroadcast();
         HundredDollarAuction(auction).endAuction();
         vm.stopBroadcast();
+
+        console.log(msg.sender, "ended the auction");
     }
 }
 
@@ -68,5 +78,7 @@ contract WithdrawAuction is Script {
         vm.startBroadcast();
         HundredDollarAuction(auction).withdraw();
         vm.stopBroadcast();
+
+        console.log(msg.sender, "withdrawn their winning amount");
     }
 }
