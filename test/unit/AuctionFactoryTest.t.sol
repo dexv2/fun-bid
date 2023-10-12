@@ -19,6 +19,9 @@ contract AuctionFactoryTest is Test {
     address public AUCTIONEER = makeAddr("auctioneer");
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
 
+    event HundredDollarAuctionCreated(address indexed auction);
+    event FaucetFunded(address indexed faucet, uint256 amountFunded);
+
     function setUp() public {
         DeployAuctionFactory deployer = new DeployAuctionFactory();
         (factory, usdt, faucet) = deployer.run();
@@ -91,5 +94,13 @@ contract AuctionFactoryTest is Test {
         uint256 endingFaucetBalance = usdt.balanceOf(address(faucet));
 
         assertEq(endingFaucetBalance, startingFaucetBalance + amountToFund);
+    }
+
+    function testEmitsEventOnFundingFaucet() public {
+        uint256 amountToFund = 100e18;
+        vm.prank(factory.owner());
+        vm.expectEmit(true, false, false, false, address(factory));
+        emit FaucetFunded(address(faucet), amountToFund);
+        factory.fundFaucet(amountToFund);
     }
 }
