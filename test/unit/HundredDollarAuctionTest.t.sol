@@ -888,4 +888,8 @@ contract HundredDollarAuctionTest is Test {
 
         assertEq(auctionerBalanceAfter, auctionerBalanceBefore + AMOUNT_DEPOSIT + auctioneerReward);
     }
+
+    function testReturnsCorrectFactoryAddress() public {
+        assertEq(auction.getFactory(), address(factory));
+    }
 }
