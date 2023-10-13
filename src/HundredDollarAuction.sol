@@ -494,4 +494,8 @@ contract HundredDollarAuction {
     function getTotalBids() public view returns (uint256) {
         return _totalBids();
     }
+
+    function getFactory() public view returns (address) {
+        return address(i_factory);
+    }
 }

@@ -41,7 +41,7 @@ contract AuctionFactory is Ownable {
      * The user who calls this function will become an auctioneer who will oversee this auction.
      * Upon starting the auction, the user deposits 10 USDT which will be returned after the auction has ended.
      */
-    function openAuction() public returns (address) {
+    function openAuction() external returns (address) {
         if (msg.sender != tx.origin) {
             revert AuctionFactory__NotEOA();
         }

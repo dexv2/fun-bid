@@ -84,8 +84,8 @@ contract HundredDollarAuctionTestIntegrations is Test {
     }
 
     function _joinAuctionAndOutbidEachOther() private {
-        uint256 amountToIncrementBidAlice = 9e18;
-        uint256 amountToIncrementBidBilly = 10e18;
+        uint256 amountToIncrementBidAlice = 90e18;
+        uint256 amountToIncrementBidBilly = 95e18;
         _joinAuction(ALICE, FIRST_BID_AMOUNT);
         _joinAuction(BILLY, SECOND_BID_AMOUNT);
         _outbidAuction(ALICE, amountToIncrementBidAlice);
@@ -114,6 +114,22 @@ contract HundredDollarAuctionTestIntegrations is Test {
         _withdrawAuction(BILLY);
         uint256 balanceAfterWithdrawalBilly = usdt.balanceOf(BILLY);
 
+        assertEq(auction.getWinningBidder(), BILLY);
+        assertEq(amountWithdrawable, AUCTION_PRICE);
+        assertEq(balanceAfterWithdrawalBilly, balanceBeforeWithdrawalBilly + AUCTION_PRICE);
+    }
+
+    function testAuctioneerCanEndAuctionAndWinnerCanWithdrawInteractions() public {
+        // Billy is the last to bid so he is the winner
+        _joinAuctionAndOutbidEachOther();
+        _endAuction(AUCTIONEER);
+
+        uint256 balanceBeforeWithdrawalBilly = usdt.balanceOf(BILLY);
+        uint256 amountWithdrawable = auction.getAmountWithdrawable(BILLY);
+        _withdrawAuction(BILLY);
+        uint256 balanceAfterWithdrawalBilly = usdt.balanceOf(BILLY);
+
+        assertEq(auction.getWinningBidder(), BILLY);
         assertEq(amountWithdrawable, AUCTION_PRICE);
         assertEq(balanceAfterWithdrawalBilly, balanceBeforeWithdrawalBilly + AUCTION_PRICE);
     }
