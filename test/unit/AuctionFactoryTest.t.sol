@@ -107,4 +107,8 @@ contract AuctionFactoryTest is Test {
     function testReturnsCorrectUSDTAddress() public {
         assertEq(factory.getUSDTAddress(), address(usdt));
     }
+
+    function testReturnsCorrectFaucetAddress() public {
+        assertEq(factory.getFaucetAddress(), address(faucet));
+    }
 }
