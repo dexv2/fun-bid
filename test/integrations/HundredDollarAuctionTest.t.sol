@@ -28,6 +28,8 @@ contract HundredDollarAuctionTestIntegrations is Test {
     uint256 private constant FIRST_BID_AMOUNT = 1e18;
     uint256 private constant SECOND_BID_AMOUNT = 5e18;
     uint256 private constant MINIMUM_BID_AMOUNT = 1e18;
+    uint256 private constant AMOUNT_DEPOSIT = 10e18;
+    uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
 
     function setUp() public {
         DeployAuctionFactory deployer = new DeployAuctionFactory();
@@ -132,5 +134,21 @@ contract HundredDollarAuctionTestIntegrations is Test {
         assertEq(auction.getWinningBidder(), BILLY);
         assertEq(amountWithdrawable, AUCTION_PRICE);
         assertEq(balanceAfterWithdrawalBilly, balanceBeforeWithdrawalBilly + AUCTION_PRICE);
+    }
+
+    function testAuctioneerCanCancelAuctionInteractions() public {
+        // more than 3 hours waiting time
+        vm.warp(MIN_WAITING_TIME + 10);
+
+        uint256 startingBalanceFactory = usdt.balanceOf(address(factory));
+        uint256 startingBalanceAuctioneer = usdt.balanceOf(AUCTIONEER);
+
+        _cancelAuction(AUCTIONEER);
+
+        uint256 endingBalanceFactory = usdt.balanceOf(address(factory));
+        uint256 endingBalanceAuctioneer = usdt.balanceOf(AUCTIONEER);
+
+        assertEq(endingBalanceFactory, startingBalanceFactory + AUCTION_PRICE);
+        assertEq(endingBalanceAuctioneer, startingBalanceAuctioneer + AMOUNT_DEPOSIT);
     }
 }
