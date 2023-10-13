@@ -103,4 +103,8 @@ contract AuctionFactoryTest is Test {
         emit FaucetFunded(address(faucet), amountToFund);
         factory.fundFaucet(amountToFund);
     }
+
+    function testReturnsCorrectUSDTAddress() public {
+        assertEq(factory.getUSDTAddress(), address(usdt));
+    }
 }
