@@ -49,7 +49,7 @@ forge script script/DeployAuctionFactory.s.sol
 ## Testing
 
 1. Unit ✅
-2. Integration (ongoing)
+2. Integration ✅
 3. Forked
 4. Staging
 

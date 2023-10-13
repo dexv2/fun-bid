@@ -34,6 +34,9 @@ contract HundredDollarAuctionTestIntegrations is Test {
     function setUp() public {
         DeployAuctionFactory deployer = new DeployAuctionFactory();
         (factory, usdt, faucet) = deployer.run();
+        console.log("factory address:", address(factory));
+        console.log("usdt address:", address(usdt));
+        console.log("faucet address:", address(faucet));
 
         FaucetRequestUSDT requestUsdt = new FaucetRequestUSDT();
         FactoryOpenAuction openAuction = new FactoryOpenAuction();
@@ -138,11 +141,10 @@ contract HundredDollarAuctionTestIntegrations is Test {
 
     function testAuctioneerCanCancelAuctionInteractions() public {
         // more than 3 hours waiting time
-        vm.warp(MIN_WAITING_TIME + 10);
+        vm.warp(block.timestamp + MIN_WAITING_TIME + 10);
 
         uint256 startingBalanceFactory = usdt.balanceOf(address(factory));
         uint256 startingBalanceAuctioneer = usdt.balanceOf(AUCTIONEER);
-
         _cancelAuction(AUCTIONEER);
 
         uint256 endingBalanceFactory = usdt.balanceOf(address(factory));
