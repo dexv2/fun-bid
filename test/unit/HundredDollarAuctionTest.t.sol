@@ -13,7 +13,6 @@ import {MockFailedTransfer} from "../mocks/MockFailedTransfer.sol";
 import {MockFailedTransferFrom} from "../mocks/MockFailedTransferFrom.sol";
 import {MockAuctionFactory} from "../mocks/MockAuctionFactory.sol";
 
-// Auction Contract balance should be 0 after the auction ends
 contract HundredDollarAuctionTest is Test {
     AuctionFactory factory;
     USDTFaucet faucet;
