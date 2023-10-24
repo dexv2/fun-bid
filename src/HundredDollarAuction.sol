@@ -220,10 +220,11 @@ contract HundredDollarAuction {
         bidAmountChecked(bidIncrement)
     {
         uint256 amountToBid = s_bidAmounts[msg.sender] + bidIncrement;
+        uint256 currentBid = s_currentBid;
 
         // lower bid than the current is not valid
-        if (amountToBid <= s_bidAmounts[s_opponentBidder[msg.sender]]) {
-            revert HundredDollarAuction__AmountDidNotOutbid(s_currentBid, amountToBid);
+        if (amountToBid <= currentBid) {
+            revert HundredDollarAuction__AmountDidNotOutbid(currentBid, amountToBid);
         }
 
         s_bidAmounts[msg.sender] = amountToBid;

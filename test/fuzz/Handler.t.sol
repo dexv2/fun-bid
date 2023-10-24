@@ -31,17 +31,35 @@ contract Handler is Test {
     function joinAuction(uint256 amountToBid) public {
         if (bidders.length == 2) {return;}
         if (bidders[0] == msg.sender) {return;}
-
         amountToBid = bound(amountToBid, 1, MAX_BID_SIZE);
 
-        vm.prank(address(factory));
-        usdt.mint(msg.sender, amountToBid);
-
-        vm.startPrank(msg.sender);
-        usdt.approve(address(auction), amountToBid);
+        _mintAndApprove(msg.sender, amountToBid);
+        vm.prank(msg.sender);
         auction.joinAuction(amountToBid);
-        vm.stopPrank();
 
         bidders.push(msg.sender);
+    }
+
+    function outbid(uint256 bidderSeed, uint256 bidIncrement) public {
+        if (bidders.length != 2) {return;}
+        address bidder = _getBidderFromSeed(bidderSeed);
+        uint256 minimumBid = 1 + auction.getCurrentBid() - auction.getBidAmount(bidder);
+        bidIncrement = bound(bidIncrement, minimumBid, MAX_BID_SIZE);
+
+        _mintAndApprove(bidder, bidIncrement);
+        vm.prank(bidder);
+        auction.outbid(bidIncrement);
+    }
+
+    function _mintAndApprove(address bidder, uint256 amount) private {
+        vm.prank(address(factory));
+        usdt.mint(bidder, amount);
+
+        vm.prank(bidder);
+        usdt.approve(address(auction), amount);
+    }
+
+    function _getBidderFromSeed(uint256 seed) private view returns (address) {
+        return bidders[seed % 2];
     }
 }
