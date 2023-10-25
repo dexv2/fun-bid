@@ -20,7 +20,8 @@ contract Handler is Test {
     address[] bidders;
     bool isFirstBidder = true;
 
-    uint256 MAX_BID_SIZE = type(uint96).max;
+    uint256 private constant MAX_BID_SIZE = type(uint96).max;
+    uint256 private constant AUCTION_PRICE = 100e18;
     uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
 
     constructor(AuctionFactory _factory, USDT _usdt, HundredDollarAuction _auction, address _auctioneer) {
@@ -62,7 +63,7 @@ contract Handler is Test {
     }
 
     function cancelAuction() public {
-        if (uint256(auction.getState()) < 2) {return;}
+        if (uint256(auction.getState()) == 2) {return;}
 
         uint256 timeSnapshot = auction.getLatestTimestamp();
         uint256 timeElapsed = timeSnapshot + MIN_WAITING_TIME + 10;
@@ -70,6 +71,14 @@ contract Handler is Test {
 
         vm.prank(auctioneer);
         auction.cancelAuction();
+    }
+
+    function endAuction() public {
+        if (uint256(auction.getState()) != 1) {return;}
+        if (auction.getCurrentBid() < AUCTION_PRICE) {return;}
+
+        vm.prank(auctioneer);
+        auction.endAuction();
     }
 
     function _mintAndApprove(address bidder, uint256 amount) private {
