@@ -81,6 +81,15 @@ contract Handler is Test {
         auction.endAuction();
     }
 
+    function withdraw() public {
+        if (uint256(auction.getState()) != 2) {return;}
+        address bidder = _getAndToggleBidder();
+        if (auction.getAmountWithdrawable(bidder) <= 0) {return;}
+
+        vm.prank(bidder);
+        auction.withdraw();
+    }
+
     function _mintAndApprove(address bidder, uint256 amount) private {
         vm.prank(address(factory));
         usdt.mint(bidder, amount);
