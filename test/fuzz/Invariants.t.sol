@@ -28,6 +28,7 @@ contract InvariantsTest is StdInvariant, Test {
     Handler handler;
     address public AUCTIONEER = makeAddr("auctioneer");
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
+    uint256 private constant AUCTION_PRICE = 100e18;
 
     function setUp() public {
         deployer = new DeployAuctionFactory();
@@ -45,7 +46,19 @@ contract InvariantsTest is StdInvariant, Test {
         targetContract(address(handler));
     }
 
-    function invariant_auctionBalanceShouldEqualTheDesiredAmount() public view {
+    function invariant_auctionBalanceShouldEqualTheDesiredAmount() public {
+        uint256 auctionBalance = usdt.balanceOf(address(auction));
+        uint256 totalBids = auction.getTotalBids();
 
+        if (uint256(auction.getState()) < 2) {
+            assertEq(auctionBalance, totalBids + AUCTION_PRICE + AMOUNT_DEPOSIT);
+        }
+        else {
+            uint256 firstBidderWithdrawable = auction.getAmountWithdrawable(auction.getFirstBidder());
+            uint256 secondBidderWithdrawable = auction.getAmountWithdrawable(auction.getSecondBidder());
+            uint256 totalAmountWithdrawables = firstBidderWithdrawable + secondBidderWithdrawable;
+
+            assertEq(auctionBalance, totalAmountWithdrawables);
+        }
     }
 }
