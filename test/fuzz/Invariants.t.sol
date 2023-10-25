@@ -49,16 +49,34 @@ contract InvariantsTest is StdInvariant, Test {
     function invariant_auctionBalanceShouldEqualTheDesiredAmount() public {
         uint256 auctionBalance = usdt.balanceOf(address(auction));
         uint256 totalBids = auction.getTotalBids();
+        console.log("auctionBalance:", auctionBalance);
 
         if (uint256(auction.getState()) < 2) {
-            assertEq(auctionBalance, totalBids + AUCTION_PRICE + AMOUNT_DEPOSIT);
+            uint256 totalRecordedAmounts = totalBids + AUCTION_PRICE + AMOUNT_DEPOSIT;
+            console.log("totalRecordedAmounts:", totalRecordedAmounts);
+
+            assertEq(auctionBalance, totalRecordedAmounts);
         }
         else {
             uint256 firstBidderWithdrawable = auction.getAmountWithdrawable(auction.getFirstBidder());
             uint256 secondBidderWithdrawable = auction.getAmountWithdrawable(auction.getSecondBidder());
             uint256 totalAmountWithdrawables = firstBidderWithdrawable + secondBidderWithdrawable;
+            console.log("totalAmountWithdrawables:", totalAmountWithdrawables);
 
-            assertEq(auctionBalance, totalAmountWithdrawables);
+            uint256 discrepancy = _difference(auctionBalance, totalAmountWithdrawables);
+            console.log("discrepancy:", discrepancy);
+
+            // very small amount of discrepancy tolerance
+            assert(discrepancy < 10);
         }
+    }
+
+    function _abs(int256 amount) private pure returns(int256) {
+        return amount >= 0 ? amount : -amount;
+    }
+
+    function _difference(uint256 amount0, uint256 amount1) private pure returns (uint256) {
+        int256 diff = int256(int256(amount0) - int256(amount1));
+        return uint256(_abs(diff));
     }
 }

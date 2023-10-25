@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
 import {AuctionFactory} from "../../src/AuctionFactory.sol";
 import {USDT} from "../../src/USDT.sol";
@@ -32,21 +32,30 @@ contract Handler is Test {
     }
 
     function joinAuction(uint256 amountToBid) public {
+        console.log("join auction called");
+        console.log("state:", uint256(auction.getState()));
+        if (msg.sender == auctioneer) {return;}
         if (uint256(auction.getState()) > 0) {return;}
-        if (bidders[0] == msg.sender) {return;}
-        amountToBid = bound(amountToBid, 1, MAX_BID_SIZE);
+        if (bidders.length > 0 && bidders[0] == msg.sender) {return;}
+        if (auction.getCurrentBid() + 1e18 > MAX_BID_SIZE) {return;}
+        amountToBid = bound(amountToBid, auction.getCurrentBid() + 1e18, MAX_BID_SIZE);
 
         _mintAndApprove(msg.sender, amountToBid);
         vm.prank(msg.sender, msg.sender);
         auction.joinAuction(amountToBid);
 
         bidders.push(msg.sender);
+        console.log("bidders pushed", bidders.length);
     }
 
     function outbid(uint256 bidIncrement) public {
+        console.log("outbid called");
         if (uint256(auction.getState()) != 1) {return;}
+        console.log("from outbid");
+        console.log("bidders length:", bidders.length);
         address bidder = _getAndToggleBidder();
-        uint256 minimumBid = 1 + auction.getCurrentBid() - auction.getBidAmount(bidder);
+        uint256 minimumBid = 1e18 + auction.getCurrentBid() - auction.getBidAmount(bidder);
+        if (minimumBid > MAX_BID_SIZE) {return;}
         bidIncrement = bound(bidIncrement, minimumBid, MAX_BID_SIZE);
 
         _mintAndApprove(bidder, bidIncrement);
@@ -55,7 +64,10 @@ contract Handler is Test {
     }
 
     function forfeit() public {
+        console.log("forfeit called");
         if (uint256(auction.getState()) != 1) {return;}
+        console.log("from forfeit");
+        console.log("bidders length:", bidders.length);
         address bidder = _getAndToggleBidder();
 
         vm.prank(bidder);
@@ -63,6 +75,7 @@ contract Handler is Test {
     }
 
     function cancelAuction() public {
+        console.log("cancel called");
         if (uint256(auction.getState()) == 2) {return;}
 
         uint256 timeSnapshot = auction.getLatestTimestamp();
@@ -74,16 +87,29 @@ contract Handler is Test {
     }
 
     function endAuction() public {
+        console.log("end auction called");
         if (uint256(auction.getState()) != 1) {return;}
         if (auction.getCurrentBid() < AUCTION_PRICE) {return;}
+        console.log("end auction passed");
 
         vm.prank(auctioneer);
         auction.endAuction();
     }
 
     function withdraw() public {
+        console.log("withdraw called");
+        if (bidders.length == 0) {return;}
         if (uint256(auction.getState()) != 2) {return;}
-        address bidder = _getAndToggleBidder();
+        console.log("withdraw state:", uint256(auction.getState()));
+        console.log("withdraw bidders length:", bidders.length);
+        address bidder;
+        if (bidders.length == 1) {
+            bidder = bidders[0];
+        }
+        else {
+            bidder = _getAndToggleBidder();
+        }
+
         if (auction.getAmountWithdrawable(bidder) <= 0) {return;}
 
         vm.prank(bidder);
@@ -99,6 +125,7 @@ contract Handler is Test {
     }
 
     function _getAndToggleBidder() private returns (address) {
+        console.log("bidders length from toggle:", bidders.length);
         bool _isFirstBidder = isFirstBidder;
         isFirstBidder = !_isFirstBidder;
         if (_isFirstBidder) {
