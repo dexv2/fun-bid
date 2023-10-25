@@ -18,6 +18,7 @@ contract Handler is Test {
 
     address auctioneer;
     address[] bidders;
+    bool isFirstBidder = true;
 
     uint256 MAX_BID_SIZE = type(uint96).max;
 
@@ -40,9 +41,9 @@ contract Handler is Test {
         bidders.push(msg.sender);
     }
 
-    function outbid(uint256 bidderSeed, uint256 bidIncrement) public {
+    function outbid(uint256 bidIncrement) public {
         if (bidders.length != 2) {return;}
-        address bidder = _getBidderFromSeed(bidderSeed);
+        address bidder = _getAndToggleBidder();
         uint256 minimumBid = 1 + auction.getCurrentBid() - auction.getBidAmount(bidder);
         bidIncrement = bound(bidIncrement, minimumBid, MAX_BID_SIZE);
 
@@ -51,12 +52,29 @@ contract Handler is Test {
         auction.outbid(bidIncrement);
     }
 
+    function forfeit() public {
+        if (bidders.length != 2) {return;}
+        address bidder = _getAndToggleBidder();
+
+        vm.prank(bidder);
+        auction.forfeit();
+    }
+
     function _mintAndApprove(address bidder, uint256 amount) private {
         vm.prank(address(factory));
         usdt.mint(bidder, amount);
 
         vm.prank(bidder);
         usdt.approve(address(auction), amount);
+    }
+
+    function _getAndToggleBidder() private returns (address) {
+        bool _isFirstBidder = isFirstBidder;
+        isFirstBidder = !_isFirstBidder;
+        if (_isFirstBidder) {
+            return bidders[0];
+        }
+        return bidders[1];
     }
 
     function _getBidderFromSeed(uint256 seed) private view returns (address) {
