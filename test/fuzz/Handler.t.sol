@@ -21,6 +21,7 @@ contract Handler is Test {
     bool isFirstBidder = true;
 
     uint256 MAX_BID_SIZE = type(uint96).max;
+    uint256 private constant MIN_WAITING_TIME = 10800; // 3 hours minimum waiting time before the auction gets cancelled
 
     constructor(AuctionFactory _factory, USDT _usdt, HundredDollarAuction _auction, address _auctioneer) {
         factory = _factory;
@@ -30,7 +31,7 @@ contract Handler is Test {
     }
 
     function joinAuction(uint256 amountToBid) public {
-        if (bidders.length == 2) {return;}
+        if (uint256(auction.getState()) > 0) {return;}
         if (bidders[0] == msg.sender) {return;}
         amountToBid = bound(amountToBid, 1, MAX_BID_SIZE);
 
@@ -42,7 +43,7 @@ contract Handler is Test {
     }
 
     function outbid(uint256 bidIncrement) public {
-        if (bidders.length != 2) {return;}
+        if (uint256(auction.getState()) != 1) {return;}
         address bidder = _getAndToggleBidder();
         uint256 minimumBid = 1 + auction.getCurrentBid() - auction.getBidAmount(bidder);
         bidIncrement = bound(bidIncrement, minimumBid, MAX_BID_SIZE);
@@ -53,11 +54,22 @@ contract Handler is Test {
     }
 
     function forfeit() public {
-        if (bidders.length != 2) {return;}
+        if (uint256(auction.getState()) != 1) {return;}
         address bidder = _getAndToggleBidder();
 
         vm.prank(bidder);
         auction.forfeit();
+    }
+
+    function cancelAuction() public {
+        if (uint256(auction.getState()) < 2) {return;}
+
+        uint256 timeSnapshot = auction.getLatestTimestamp();
+        uint256 timeElapsed = timeSnapshot + MIN_WAITING_TIME + 10;
+        vm.warp(timeElapsed);
+
+        vm.prank(auctioneer);
+        auction.cancelAuction();
     }
 
     function _mintAndApprove(address bidder, uint256 amount) private {
