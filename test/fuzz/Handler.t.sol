@@ -37,7 +37,7 @@ contract Handler is Test {
         amountToBid = bound(amountToBid, 1, MAX_BID_SIZE);
 
         _mintAndApprove(msg.sender, amountToBid);
-        vm.prank(msg.sender);
+        vm.prank(msg.sender, msg.sender);
         auction.joinAuction(amountToBid);
 
         bidders.push(msg.sender);
