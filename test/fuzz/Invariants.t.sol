@@ -18,8 +18,8 @@ import {Handler} from "./Handler.t.sol";
  * 
  * State is ended:
  * Auction Contract balance should always be equal to total amount withdrawables
+ * 
  */
-
 contract InvariantsTest is StdInvariant, Test {
     DeployAuctionFactory deployer;
     AuctionFactory factory;
