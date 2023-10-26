@@ -3,11 +3,11 @@
 pragma solidity 0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
-import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
-import {AuctionFactory} from "../../src/AuctionFactory.sol";
-import {USDT} from "../../src/USDT.sol";
+import {HundredDollarAuction} from "../../../src/HundredDollarAuction.sol";
+import {AuctionFactory} from "../../../src/AuctionFactory.sol";
+import {USDT} from "../../../src/USDT.sol";
 
-contract Handler is Test {
+contract HandlerActive is Test {
     error Handler__MintFailed();
 
     AuctionFactory factory;
@@ -53,33 +53,6 @@ contract Handler is Test {
         _mintAndApprove(bidder, bidIncrement);
         vm.prank(bidder);
         auction.outbid(bidIncrement);
-    }
-
-    function forfeit() public {
-        if (uint256(auction.getState()) != 1) {return;}
-        address bidder = _getAndToggleBidder();
-
-        vm.prank(bidder);
-        auction.forfeit();
-    }
-
-    function cancelAuction() public {
-        if (uint256(auction.getState()) == 2) {return;}
-
-        uint256 timeSnapshot = auction.getLatestTimestamp();
-        uint256 timeElapsed = timeSnapshot + MIN_WAITING_TIME + 10;
-        vm.warp(timeElapsed);
-
-        vm.prank(auctioneer);
-        auction.cancelAuction();
-    }
-
-    function endAuction() public {
-        if (uint256(auction.getState()) != 1) {return;}
-        if (auction.getCurrentBid() < AUCTION_PRICE) {return;}
-
-        vm.prank(auctioneer);
-        auction.endAuction();
     }
 
     function withdraw() public {

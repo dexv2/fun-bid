@@ -4,23 +4,23 @@ pragma solidity 0.8.18;
 
 import {Test, console} from "forge-std/Test.sol";
 import {StdInvariant} from "forge-std/StdInvariant.sol";
-import {DeployAuctionFactory} from "../../script/DeployAuctionFactory.s.sol";
-import {HundredDollarAuction} from "../../src/HundredDollarAuction.sol";
-import {AuctionFactory} from "../../src/AuctionFactory.sol";
-import {USDT} from "../../src/USDT.sol";
+import {DeployAuctionFactory} from "../../../script/DeployAuctionFactory.s.sol";
+import {HundredDollarAuction} from "../../../src/HundredDollarAuction.sol";
+import {AuctionFactory} from "../../../src/AuctionFactory.sol";
+import {USDT} from "../../../src/USDT.sol";
 import {Handler} from "./Handler.t.sol";
 
 /**
  * Invariants:
  * 
- * State not yet ended:
+ * State is active:
  * Auction Contract balance should always be equal to total bids + auction price + deposit amount
  * 
  * State is ended:
- * Auction Contract balance should always be equal to total amount withdrawables
+ * Auction Contract balance should always be equal to total amount withdrawables with negligible discrepancy
  * 
  */
-contract InvariantsTest is StdInvariant, Test {
+contract InvariantsTestCompletedAuction is StdInvariant, Test {
     DeployAuctionFactory deployer;
     AuctionFactory factory;
     HundredDollarAuction auction;
@@ -46,7 +46,7 @@ contract InvariantsTest is StdInvariant, Test {
         targetContract(address(handler));
     }
 
-    function invariant_auctionBalanceShouldEqualTheDesiredAmount() public {
+    function invariant_auctionBalanceShouldEqualTheDesiredAmountCompleted() public {
         uint256 auctionBalance = usdt.balanceOf(address(auction));
         uint256 totalBids = auction.getTotalBids();
         console.log("auctionBalance:", auctionBalance);
@@ -64,10 +64,18 @@ contract InvariantsTest is StdInvariant, Test {
             console.log("totalAmountWithdrawables:", totalAmountWithdrawables);
 
             uint256 discrepancy = _difference(auctionBalance, totalAmountWithdrawables);
-            console.log("discrepancy:", discrepancy);
+            console.log("discrepancy: %s wei", discrepancy);
 
-            // very small amount of discrepancy tolerance due to multiplication and division
-            assert(discrepancy < 10);
+            /**
+             * @custom:tolerance is very small amount of discrepancy (in wei) due to multiplication and division
+             * @dev play with this value to see different results.
+             * For example, you can set it to zero, means that the values should always be equal.
+             * You might get an error that the values auctionBalance and totalAmountWithdrawables are
+             * not equal with difference of 1 to 2 wei which is negligible in real world value.
+             * 
+             */
+            uint256 tolerance = 2;
+            assertLe(discrepancy, tolerance);
         }
     }
 

@@ -8,7 +8,7 @@ import {DeployAuctionFactory} from "../../../script/DeployAuctionFactory.s.sol";
 import {HundredDollarAuction} from "../../../src/HundredDollarAuction.sol";
 import {AuctionFactory} from "../../../src/AuctionFactory.sol";
 import {USDT} from "../../../src/USDT.sol";
-import {Handler} from "./Handler.t.sol";
+import {HandlerActive} from "./HandlerActive.t.sol";
 
 /**
  * Invariants:
@@ -22,7 +22,7 @@ contract InvariantsTestActiveAuction is StdInvariant, Test {
     AuctionFactory factory;
     HundredDollarAuction auction;
     USDT usdt;
-    Handler handler;
+    HandlerActive handler;
     address public AUCTIONEER = makeAddr("auctioneer");
     uint256 private constant AMOUNT_DEPOSIT = 10e18;
     uint256 private constant AUCTION_PRICE = 100e18;
@@ -39,7 +39,7 @@ contract InvariantsTestActiveAuction is StdInvariant, Test {
         auction = HundredDollarAuction(factory.openAuction());
         vm.stopPrank();
 
-        handler = new Handler(factory, usdt, auction, AUCTIONEER);
+        handler = new HandlerActive(factory, usdt, auction, AUCTIONEER);
         targetContract(address(handler));
     }
 
