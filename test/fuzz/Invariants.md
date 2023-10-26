@@ -6,7 +6,7 @@ This invariant is when the auction is still ongoing:
 2. The auction is not cancelled.
 3. The auction is not yet ended.
 
-The <span style="color: turquoise; font-weight: 700;">Auction Contract balance</span> should always be equal to <span style="color: turquoise; font-weight: 700;">total bids + auction price + deposit amount</span>.
+The `Auction Contract balance` should always be equal to `total bids + auction price + deposit amount`.
 <br>
 It means, no one should be able to withdraw or get any amount from the contract while it is still ongoing.
 
@@ -16,6 +16,6 @@ This invariant is when the auction has concluded:
 2. The auction is cancelled, or;
 3. The auction has already ended.
 
-The <span style="color: turquoise; font-weight: 700;">Auction Contract balance</span> should be equal to <span style="color: turquoise; font-weight: 700;">total amount withdrawables</span> but with very small and 
+The `Auction Contract balance` should mostly be equal to `total amount withdrawables` but with very 
 <br>
-negligible discrepancy due to multiplication and division when calculating the incentives.
+small and negligible discrepancy due to multiplication and division when calculating the incentives.
