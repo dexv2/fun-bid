@@ -54,7 +54,7 @@ forge script script/DeployAuctionFactory.s.sol
 4. Staging
 
 ## Advanced Testing
-1. Fuzzing / Invariant (ongoing 🔄)
+1. Fuzzing / Invariant ✅ - Check the Invariants [here](test/fuzz/Invariants.md)
 
 ```
 forge test
