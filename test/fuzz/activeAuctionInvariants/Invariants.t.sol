@@ -13,7 +13,7 @@ import {Handler} from "./Handler.t.sol";
 /**
  * Invariants:
  * 
- * State not active:
+ * State is active:
  * Auction Contract balance should always be equal to total bids + auction price + deposit amount
  * 
  */
