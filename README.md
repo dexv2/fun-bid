@@ -53,6 +53,9 @@ forge script script/DeployAuctionFactory.s.sol
 3. Forked
 4. Staging
 
+## Advanced Testing
+1. Fuzzing / Invariant (ongoing 🔄)
+
 ```
 forge test
 ```
@@ -76,10 +79,6 @@ forge test --fork-url $SEPOLIA_RPC_URL
 ```
 forge coverage
 ```
-
-## Advanced Testing
-1. Fuzz
-2. Invariant
 
 # Deployment to a testnet or mainnet
 

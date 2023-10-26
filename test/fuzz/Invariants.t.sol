@@ -66,7 +66,7 @@ contract InvariantsTest is StdInvariant, Test {
             uint256 discrepancy = _difference(auctionBalance, totalAmountWithdrawables);
             console.log("discrepancy:", discrepancy);
 
-            // very small amount of discrepancy tolerance
+            // very small amount of discrepancy tolerance due to multiplication and division
             assert(discrepancy < 10);
         }
     }
